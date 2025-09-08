@@ -13,6 +13,8 @@ import xlsxwriter
 #for commerce synthetic data
 from faker_commerce import Provider
 
+#timezone check
+import pytz
 
 # random character/ digit fix
 
@@ -22,6 +24,14 @@ import string
 # Define the correct character set
 charset = string.ascii_uppercase + string.digits 
 
+# Timezone check
+# Define the UTC+8 timezone
+utc_plus_8 = pytz.timezone('Australia/Perth')  
+
+# Get current date in UTC+8
+now = datetime.now(utc_plus_8).date()
+
+print("Current date in UTC+8:", now.strftime("%Y-%m-%d %H:%M:%S"))
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument('--seed', type=int, default=42)
@@ -35,6 +45,8 @@ def main():
     random.seed(args.seed); np.random.seed(args.seed)
     out = pathlib.Path(args.out); ensure_dir(out)
 
+### DIMENSION TABLES
+    
     # Minimal sample generation (expand to full volumes per docs)
     fake = Faker('en_AU')
     fake.add_provider(Provider)
@@ -55,10 +67,10 @@ def main():
         for i in range(1, 25000):  
             nk = 'SKU-' + rstr.rstr(charset, 6)
             current_price = round(random.uniform(1, 10000), 4)# Random price (DECIMAL 12,4 style)
-            introduced_dt = date.today() - timedelta(days=random.randint(0, 2000))
+            introduced_dt = now - timedelta(days=random.randint(0, 2000))
             # Determine discontinued date and indicator
             if random.random() < 0.2:  # 20% chance of being discontinued
-                days_since_intro = (date.today() - introduced_dt).days
+                days_since_intro = (now - introduced_dt).days
                 discontinued_dt = introduced_dt + timedelta(days=random.randint(0, days_since_intro))
                 is_discontinued = True
             else:
@@ -81,7 +93,7 @@ def main():
             open_dt = date.today() - timedelta(days=random.randint(0, 2000))
             # Determine discontinued date and indicator
             if random.random() < 0.2:  # 20% chance of being discontinued
-                days_since_intro = (date.today() - introduced_dt).days
+                days_since_intro = (now - open_dt).days
                 close_dt = open_dt + timedelta(days=random.randint(0, days_since_intro))
             else:
                 close_dt = '' 
@@ -96,11 +108,12 @@ def main():
             ltd = random.randint(1, 28) # 1 to 28 days
             # Determine discontinued date and indicator
             if random.random() < 0.2:  # 20% chance of being discontinued
-                days_since_intro = (date.today() - introduced_dt).days
+                days_since_intro = (now - introduced_dt).days
                 close_dt = open_dt + timedelta(days=random.randint(0, days_since_intro))
             else:
                 close_dt = '' 
             f.write(f"{i},{nk},{fake.company().replace(',',' ')},{fake.country_code().replace(',',' ')},{ltd},{fake.boolean()}\n")
+### FACTS
     # Shipments parquet sample
     tbl = pa.table({
         'shipment_id': pa.array(range(1, 10001), type=pa.int64()),
