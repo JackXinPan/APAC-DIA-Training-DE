@@ -24,6 +24,9 @@ import string
 # Define the correct character set
 charset = string.ascii_uppercase + string.digits 
 
+# read csv
+import csv
+
 # Timezone check
 # Define the UTC+8 timezone
 utc_plus_8 = pytz.timezone('Australia/Perth')  
@@ -53,12 +56,16 @@ def main():
     product_count = 25000
     store_count = 5000
     supplier_count = 8000
+    transaction_count = 1000001
+    transaction_backdate = 200
 
     customer_ids = []
     product_ids = []
     store_ids = []
+    store_channel_map = {}# for fact table
     supplier_ids = []
     order_ids = []
+    product_price_map = {} # for fact table
     
     # Minimal sample generation (expand to full volumes per docs)
     fake = Faker('en_AU')
@@ -66,10 +73,10 @@ def main():
     customers_path = out/'customers.csv'
     with customers_path.open('w', encoding='utf-8') as f:
         f.write('customer_id,natural_key,first_name,last_name,email,phone,address_line1,address_line2,city,state_region,postcode,country_code,latitude,longitude,birth_date,join_ts,is_vip,gdpr_consent\n')
-        for i in range(1, supplier_count):  # TODO raise to 80_000
+        for i in range(1, customer_count):  # TODO raise to 80_000
             customer_ids.append(i)
             nk = 'CUST-' + rstr.rstr(charset, 8)
-            email = fake.email() if random.random()>0.1 else 'bad_email'
+            email = fake.email() if random.random()>0.01 else 'bad_email' # 0.1 is 10% in base code so changing to 0.01
             lat = -44 + random.random()*10; lon = 112 + random.random()*40
             birth = date(1960,1,1) + timedelta(days=random.randint(0, 20000))
             join_ts = datetime(2024,1,1) + timedelta(days=random.randint(0, 400), seconds=random.randint(0, 86399))
@@ -80,29 +87,37 @@ def main():
         f.write('product_id,sku,name,category,subcategory,current_price,currency,introduced_dt,discontinued_dt,is_discontinued\n')
         for i in range(1, product_count):             
             nk = 'SKU-' + rstr.rstr(charset, 6)
-            current_price = round(random.uniform(1, 10000), 4)# Random price (DECIMAL 12,4 style)
+            current_price = round((random.random() ** 2) * 1000, 4) if random.random() > 0.01 else 0.00 # Random price skewed using the squaring or numbers below 1 (DECIMAL 12,4 style)
             introduced_dt = now - timedelta(days=random.randint(0, 2000))
             # Determine discontinued date and indicator
             if random.random() < 0.2:  # 20% chance of being discontinued
                 days_since_intro = (now - introduced_dt).days
-                discontinued_dt = introduced_dt + timedelta(days=random.randint(0, days_since_intro))
+                discontinued_dt = introduced_dt + timedelta(days=random.randint(0, days_since_intro)) if random.random() > 0.02 else date(1911, 12, 31) #anomaly
                 is_discontinued = True                
             else:
                 discontinued_dt = date(9999, 12, 31)
                 is_discontinued = False
-                product_ids.append(i)
+            if not is_discontinued or (now - discontinued_dt).days > transaction_backdate:
+                product_ids.append(i) # transactions assumed to not include discontinued products transactions date back 200 days
+                product_price_map[i] = current_price # transactions assumed to not include discontinued products transactions date back 200 days
             f.write(f"{i},{nk},{fake.ecommerce_name()},{fake.ecommerce_category()},{fake.ecommerce_material()},{current_price},{fake.currency_code()},{introduced_dt},{discontinued_dt},{is_discontinued}\n")
     #Stores
     stores_path = out/'stores.csv'
     with stores_path.open('w', encoding='utf-8') as f:
         f.write('store_id,store_code,name,channel,region,state,latitude,longitude,open_dt,close_dt\n')
-        for i in range(1, store_count):             
-            if random.random() < 0.5: # 50/50 online or retail
-                channel = 'online'
-                nk =  'O-' + rstr.rstr(charset, 4)
+        for i in range(1, store_count):      
+            existing_nks = [] # for duplicates
+            if random.random() < 0.01 and existing_nks:  # 1% chance to reuse an existing nk
+                nk = random.choice(existing_nks)
+                channel = 'online' if nk.startswith('O-') else 'retail'
             else:
-                channel = 'retail'
-                nk =  'R-' + rstr.rstr(charset, 4)
+                if random.random() < 0.5:
+                    channel = 'online'
+                    nk = 'O-' + rstr.rstr(charset, 8)
+                else:
+                    channel = 'retail'
+                    nk = 'R-' + rstr.rstr(charset, 8)
+                existing_nks.append(nk)
             
             open_dt = date.today() - timedelta(days=random.randint(0, 2000))
             # Determine discontinued date and indicator
@@ -110,65 +125,41 @@ def main():
                 days_since_intro = (now - open_dt).days
                 close_dt = open_dt + timedelta(days=random.randint(0, days_since_intro))
             else:
-                close_dt = '' 
-                store_ids.append(i)
-            f.write(f"{i},{nk},{'Insight ' + fake.city().replace(',',' ')},{channel},{fake.country().replace(',',' ')},{fake.state()},{fake.latitude()},{fake.longitude()},{open_dt}, {close_dt}\n")
+                close_dt = None
+            if close_dt is None or (now - close_dt).days > transaction_backdate:
+                    store_ids.append(i)
+                    store_channel_map[i] = channel
+            # Format close_dt for writing (handle None safely)
+            open_dt = open_dt.isoformat()
+            close_dt = close_dt.isoformat() if close_dt else ''
+
+            #lat long
+            latitude = fake.latitude() if random.random() > 0.01 else float(fake.latitude()) + random.uniform(1000,6000)
+            longitude = fake.longitude() if random.random() > 0.01 else float(fake.longitude()) + random.uniform(1000,6000)
+            f.write(f"{i},{nk},{'Insight ' + fake.city().replace(',',' ')},{channel},{fake.country().replace(',',' ')},{fake.state()},{latitude},{longitude},{open_dt}, {close_dt}\n")
     #Suppliers
     suppliers_path = out/'suppliers.csv'
     with suppliers_path.open('w', encoding='utf-8') as f:
         f.write('supplier_id,supplier_code,name,country_code,lead_time_days,preffered\n')
         for i in range(1, supplier_count):  
-#            supplier_ids.append(i)
+            supplier_ids.append(i)
             nk =  'S-' + rstr.rstr(charset, 4)         
             ltd = random.randint(1, 28) # 1 to 28 days
             f.write(f"{i},{nk},{fake.company().replace(',',' ')},{fake.country_code().replace(',',' ')},{ltd},{fake.boolean()}\n")
-### FACTS TABLES
+### FACTS TABLES Do them together because they reference each other
 
     # ordersheader
     ordersheader_path = out/'orders_header.csv'
-    with ordersheader_path.open('w', encoding='utf-8') as f:
-        f.write('order_id,order_dt_month,order_ts,order_dt_local,customer_id,store_id,channel,payment_method,coupon_code,shipping_fee,currency\n')
-        for i in range(1, 1000001):  
-            # Generate a random date within the last 200 days
-            order_ids.append(i)
-            random_days_ago = random.randint(0, 200)
-            raw_date = now - timedelta(days=random_days_ago)
-            #start of month for partioning 
-            
-            order_dt_month = raw_date.replace(day=1)
-            # Create a timestamp by combining raw_date with a random time offset
-            random_seconds = random.randint(0, 86399)  # Seconds in a day
-            order_ts = datetime.combine(raw_date, datetime.min.time()) + timedelta(seconds=random_seconds)
-            order_dt_local = raw_date
-            join_ts = datetime(2024,1,1) + timedelta(days=random.randint(0, 400), seconds=random.randint(0, 86399))
-            if random.random() < 0.5:  # 50/50 online or retail
-                channel = 'online'
-                rand = random.random()
-                if rand < 0.3:
-                    payment_method = 'debit'
-                elif rand < 0.6:
-                    payment_method = 'bitcoin'
-                else:
-                    payment_method = 'afterpay'
-            else:
-                channel = 'retail'
-                if random.random() < 0.5:
-                    payment_method = 'debit'
-                else:
-                    payment_method = 'cash'
-            if random.random() < 0.7:
-                coupon_code = rstr.rstr(charset, 10)
-            else:
-                coupon_code = ''                    
-            f.write(f"{i},{order_dt_month},{order_ts},{order_dt_local},{random.choice(customer_ids)},{random.choice(store_ids)},{channel},{payment_method},{rstr.rstr(charset, 10)},{round(random.uniform(1, 20), 2)},{fake.currency_code()}\n")
-
     #ordersLines
     orderslines_path = out/'orders_lines.csv'
-    with orderslines_path.open('w', encoding='utf-8') as f:
-        f.write('order_id,order_dt_month, line_number,product_id,qty,unit_price,line_discount_pct,tax_pct\n')
-        for i in range(1, 3000001):  
-            # Generate a random date within the last 200 days
-            random_days_ago = random.randint(0, 200)
+    with ordersheader_path.open('w', encoding='utf-8') as f,orderslines_path.open('w', encoding='utf-8') as olf:
+        f.write('order_id,order_dt_month,order_ts,order_dt_local,customer_id,store_id,channel,payment_method,coupon_code,shipping_fee,currency\n')
+        olf.write('order_id,order_dt_month, line_number,product_id,qty,unit_price,line_discount_pct,tax_pct\n')
+        for i in range(1, transaction_count):  
+#OrdersHeaders
+            # Generate a random date within the last transaction_backdate days
+            order_ids.append(i)
+            random_days_ago = random.randint(0, transaction_backdate)
             raw_date = now - timedelta(days=random_days_ago)
             #start of month for partioning 
             
@@ -177,9 +168,16 @@ def main():
             random_seconds = random.randint(0, 86399)  # Seconds in a day
             order_ts = datetime.combine(raw_date, datetime.min.time()) + timedelta(seconds=random_seconds)
             order_dt_local = raw_date
-            join_ts = datetime(2024,1,1) + timedelta(days=random.randint(0, 400), seconds=random.randint(0, 86399))
-            if random.random() < 0.5:  # 50/50 online or retail
-                channel = 'online'
+            join_ts = datetime(2024,1,1) + timedelta(days=random.randint(0, 400), seconds=random.randint(0, 86399))    
+            if random.random() < 0.7:
+                coupon_code = rstr.rstr(charset, 10)
+                line_discount_pct = random.choice([0.10, 0.20, 0.50]) # 10%, 20% or 50%
+            else:
+                coupon_code = ''
+                line_discount_pct = 0.00
+            store_id = random.choice(store_ids) if random.random() > 0.01 else random.uniform(store_count, store_count*2)
+            channel = store_channel_map.get(store_id, 'online')
+            if channel == 'online':
                 rand = random.random()
                 if rand < 0.3:
                     payment_method = 'debit'
@@ -188,16 +186,34 @@ def main():
                 else:
                     payment_method = 'afterpay'
             else:
-                channel = 'retail'
                 if random.random() < 0.5:
                     payment_method = 'debit'
                 else:
                     payment_method = 'cash'
-            if random.random() < 0.7:
-                coupon_code = rstr.rstr(charset, 10)
-            else:
-                coupon_code = ''                    
-            f.write(f"{i},{order_dt_month},{order_ts},{order_dt_local},{random.choice(customer_ids)},{random.choice(store_ids)}}\n")
+            customer_id = random.choice(customer_ids) if random.random() > 0.01 else random.uniform(customer_count, customer_count*2)
+            shipping_fee = round(random.uniform(1, 20), 2)
+            # write to orderheaders
+            f.write(f"{i},{order_dt_month},{order_ts},{order_dt_local},{customer_id},{store_id},{channel},{payment_method},{coupon_code},{shipping_fee},{fake.currency_code()}\n")    
+#Orderslines
+            # Generate 1–6 lines per order
+            num_lines = random.randint(1, 6)
+            for line_number in range(1, num_lines + 1):
+            # Anomoly
+                if random.random() < 0.01:
+                    product_id = f"INVALID_{random.randint(1000,9999)}"
+                    unit_price = round(random.uniform(1, 1000), 4)
+                else:
+                    product_id = random.choice(product_ids)
+                    unit_price = product_price_map.get(product_id, round(random.uniform(1, 1000), 4))
+            # qty (amount of each product) up to 10 
+                qty = random.randint(1, 10)
+                if random.random() < 0.001:
+                    if random.random() < 0.5:
+                        qty *= -1  # Rare negative quantity times by negative 1
+                    else:
+                        qty *= 0   # Rare zero quantity times by 0
+                tax_pct = random.choice([0.050, 0.075, 0.100])
+                olf.write(f"{i},{order_dt_month},{line_number},{product_id},{qty},{unit_price},{line_discount_pct},{tax_pct}\n")
 
     # Shipments parquet sample
     tbl = pa.table({
