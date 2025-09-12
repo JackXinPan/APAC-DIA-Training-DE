@@ -1,5 +1,9 @@
 # Generate synthetic raw data locally with controlled edge cases.
 # Usage: python scripts/generate_data.py --seed 42 --out data_raw
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import argparse, os, pathlib, random
 import numpy as np
 from faker import Faker
