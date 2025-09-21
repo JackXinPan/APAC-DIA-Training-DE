@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytz
 import pandas as pd
 
-from schemas.schemas import *
+from my_schemas.my_schemas import *
 
 from datetime import datetime, timedelta, date
 
@@ -17,7 +17,7 @@ utc_plus_8 = pytz.timezone('Australia/Perth')
 
 # Configure destinations of where transformed data should go (folder directory)
 duckdb_dest = dlt.destinations.duckdb(
-    credentials="duckdb/warehouse.duckdb"
+    credentials="C:/Users/jpan/Documents/Assessment/APAC-DIA-Training-DE/duckdb/warehouse.duckdb"
 )
 
 #setup a DuckDB destination -  a local analytics database
@@ -25,6 +25,17 @@ parquet_dest = dlt.destinations.filesystem(
     bucket_url="lake/bronze/parquet",
     file_format="parquet"
 )
+
+#helper function to convert pyarrow schema to dictionary of dicts
+def pyarrow_schema_to_dlt_columns(schema: pa.Schema) -> dict:
+    return {
+        field.name: {
+            "name": field.name,
+            "data_type": str(field.type)
+        }
+        for field in schema
+    }
+
 
 #define source pipeline to read raw data from the folder data_raw
 @dlt.source(name="retail_bronze")
@@ -35,7 +46,7 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource(
         name="customers", # name of the py in the raw_data folder
         write_disposition="replace", # overwrite
-        columns=customers_schema  # Use PyArrow schema # schema grabbed the schema.py file
+        columns=pyarrow_schema_to_dlt_columns(customers_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
     )
     def load_customers():
         # Read CSV and yield data will load in the data from the data_raw file 
@@ -43,9 +54,7 @@ def retail_source(raw_path: str = "data_raw"):
         customerdf = pd.read_csv(file_path)
         for record in customerdf.to_dict(orient="records"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
-        # DLT handles schema validation automatically
-    return [load_customers]
-        
+ 
 #   @dlt.resource( #order
 #        name="orders",
 #        write_disposition="append",
@@ -56,18 +65,20 @@ def retail_source(raw_path: str = "data_raw"):
 #        # Incremental loading with automatic dedup
 #        pass
     
-#    @dlt.transformer(
-#        data_from=load_customers,
-#        write_disposition="replace"
-#    )
-#    def add_audit_columns(record):
-#        # Add ingestion_ts, src_filename, etc.
-#        return {
-#            **record,
- #           "ingestion_ts": datetime.now(utc_plus_8),
-#            "src_filename": dlt.current.source_state().get("file")
-#        }
+    @dlt.transformer(
+        data_from=load_customers,
+        write_disposition="replace"
+    )
+    def add_audit_columns(record):
+        # Add ingestion_ts, src_filename, etc.
+        return {
+            **record,
+           "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
     
+    # DLT handles schema validation automatically      
+    return [load_customers]   
 #   return [
 #        add_audit_columns,
 #        load_orders
