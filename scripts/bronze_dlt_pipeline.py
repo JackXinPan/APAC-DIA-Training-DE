@@ -65,7 +65,31 @@ def retail_source(raw_path: str = "data_raw"):
         customerdf = pd.read_csv(file_path)
         for record in customerdf.to_dict(orient="records"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
+    @dlt.resource(
+        name="products", # name of the py in the raw_data folder
+        write_disposition="replace", # overwrite
+        columns=pyarrow_schema_to_dlt_columns(products_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+    )
+    def load_products():
+        # Read CSV and yield data will load in the data from the data_raw file 
+        file_path = os.path.join(raw_path, "products.csv")
+        productsdf = pd.read_csv(file_path)
+        for record in productsdf.to_dict(orient="records"):
+            yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
+    def add_audit_columns(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
  
+     # Apply transformer separately
+    customers_with_audit = dlt.transformer(data_from=load_customers, write_disposition="replace")(add_audit_columns)
+    products_with_audit = dlt.transformer(data_from=load_products, write_disposition="replace")(add_audit_columns)
+    
+    return [customers_with_audit, products_with_audit]
+    
+
 #   @dlt.resource( #order
 #        name="orders",
 #        write_disposition="append",
@@ -75,21 +99,6 @@ def retail_source(raw_path: str = "data_raw"):
 #    def load_orders():
 #        # Incremental loading with automatic dedup
 #        pass
-    
-    @dlt.transformer(
-        data_from=load_customers,
-        write_disposition="replace"
-    )
-    def add_audit_columns(record):
-        # Add ingestion_ts, src_filename, etc.
-        return {
-            **record,
-           "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
-    
-    # DLT handles schema validation automatically      
-    return [load_customers]   
 #   return [
 #        add_audit_columns,
 #        load_orders
@@ -109,7 +118,7 @@ pipelinepq = dlt.pipeline(
 )
 
 #infoduck = pipelineduck.run(retail_source())
-#pipelinepq.drop()  # Clears previous format and schema
+pipelinepq.drop()  # Clears previous format and schema
 infopq = pipelinepq.run(retail_source(), loader_file_format="parquet")
 
 #print(infoduck)
@@ -119,5 +128,18 @@ print( "it's ran")
 
 #try to connect
 # Query directly from the Parquet file
-result = duckdb.query("SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'").to_df()
-print(result)
+# Query customers
+# Query products
+result_products = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/products/*.parquet'"
+).to_df()
+print("\nProducts table:")
+print(result_products.head())
+
+
+result_customers = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'"
+).to_df()
+print("Customers table:")
+print(result_customers.head())   # head() avoids dumping thousands of rows
+
