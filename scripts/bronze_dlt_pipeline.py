@@ -7,7 +7,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytz
 import pandas as pd
-
+import duckdb
 from my_schemas.my_schemas import *
 
 from datetime import datetime, timedelta, date
@@ -15,9 +15,9 @@ from datetime import datetime, timedelta, date
 # Define the UTC+8 timezone
 utc_plus_8 = pytz.timezone('Australia/Perth')  
 
-# Configure destinations of where transformed data should go (folder directory)
+# Configure destinations of where transformed data should go 
 duckdb_dest = dlt.destinations.duckdb(
-    credentials="C:/Users/jpan/Documents/Assessment/APAC-DIA-Training-DE/duckdb/warehouse.duckdb"
+    credentials="duckdb/warehouse.duckdb"
 )
 
 #setup a DuckDB destination -  a local analytics database
@@ -26,19 +26,30 @@ parquet_dest = dlt.destinations.filesystem(
     file_format="parquet"
 )
 
-#helper function to convert pyarrow schema to dictionary of dicts
+# helper function to convert pyarrow schema to dictionary of dicts + convert data types to DLT compatible
 def pyarrow_schema_to_dlt_columns(schema: pa.Schema) -> dict:
+    # Mapping from PyArrow types to DLT-compatible types
+    type_map = {
+        "int64": "bigint",
+        "string": "text",
+        "float64": "double",
+        "bool": "bool",
+        "date32": "date",
+        "timestamp[us]": "timestamp" #### may need to be changed downstream
+    }
+
     return {
         field.name: {
             "name": field.name,
-            "data_type": str(field.type)
+            "data_type": type_map.get(str(field.type), "text")  # default to 'text' if unknown
         }
         for field in schema
     }
 
 
+
 #define source pipeline to read raw data from the folder data_raw
-@dlt.source(name="retail_bronze")
+@dlt.source(name="retail_bronze") # schema
 def retail_source(raw_path: str = "data_raw"):
     # resources are data loaders 
     # When you wrap a function like load_customers() with @dlt.resource, you're telling DLT: "This is a stream of records I want to load into a destination table."
@@ -90,7 +101,23 @@ def retail_source(raw_path: str = "data_raw"):
 #Reads from the source
 #Applies transformations (like add_audit_columns) and schema validation
 #Loads into the destination table (customers)
+#pipelineduck = dlt.pipeline(pipeline_name="retail_bronze", destination=duckdb_dest)
+pipelinepq = dlt.pipeline(
+    pipeline_name="retail_bronze",
+    destination=parquet_dest,
+    dataset_name="retail_bronze_dataset"
+)
 
-pipeline = dlt.pipeline(pipeline_name="retail_bronze", destination=duckdb_dest)
-info = pipeline.run(retail_source())
-print(info)
+#infoduck = pipelineduck.run(retail_source())
+#pipelinepq.drop()  # Clears previous format and schema
+infopq = pipelinepq.run(retail_source(), loader_file_format="parquet")
+
+#print(infoduck)
+print(infopq)
+
+print( "it's ran")
+
+#try to connect
+# Query directly from the Parquet file
+result = duckdb.query("SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'").to_df()
+print(result)
