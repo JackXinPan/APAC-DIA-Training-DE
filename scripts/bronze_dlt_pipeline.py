@@ -11,7 +11,7 @@ import duckdb
 from my_schemas.my_schemas import *
 
 from datetime import datetime, timedelta, date
-
+import json
 # Define the UTC+8 timezone
 utc_plus_8 = pytz.timezone('Australia/Perth')  
 
@@ -35,7 +35,8 @@ def pyarrow_schema_to_dlt_columns(schema: pa.Schema) -> dict:
         "float64": "double",
         "bool": "bool",
         "date32": "date",
-        "timestamp[us]": "timestamp" #### may need to be changed downstream
+        "timestamp[us]": "timestamp",#### may need to be changed downstream
+        "json": "json"
     }
 
     return {
@@ -55,40 +56,162 @@ def retail_source(raw_path: str = "data_raw"):
     # When you wrap a function like load_customers() with @dlt.resource, you're telling DLT: "This is a stream of records I want to load into a destination table."
     # customers becomes the destination table, and the @dlt.resource function acts as a data pipeline component that feeds it
     @dlt.resource(
-        name="customers", # name of the py in the raw_data folder
         write_disposition="replace", # overwrite
         columns=pyarrow_schema_to_dlt_columns(customers_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
     )
     def load_customers():
         # Read CSV and yield data will load in the data from the data_raw file 
+        print("Loading resource: customers")
         file_path = os.path.join(raw_path, "customers.csv")
-        customerdf = pd.read_csv(file_path)
-        for record in customerdf.to_dict(orient="records"):
+        customersdf = pd.read_csv(file_path)
+        for record in customersdf.to_dict(orient="records"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
     @dlt.resource(
-        name="products", # name of the py in the raw_data folder
         write_disposition="replace", # overwrite
         columns=pyarrow_schema_to_dlt_columns(products_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
     )
     def load_products():
         # Read CSV and yield data will load in the data from the data_raw file 
+        print("Loading resource: products")
         file_path = os.path.join(raw_path, "products.csv")
         productsdf = pd.read_csv(file_path)
         for record in productsdf.to_dict(orient="records"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
-    def add_audit_columns(record):
+    @dlt.resource(
+            write_disposition="replace", # overwrite
+            columns=pyarrow_schema_to_dlt_columns(stores_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        )
+    def load_stores():
+        # Read CSV and yield data will load in the data from the data_raw file
+        print("Loading resource: stores") 
+        file_path = os.path.join(raw_path, "stores.csv")
+        storesdf = pd.read_csv(file_path)
+        for record in storesdf.to_dict(orient="records"):
+            yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
+    @dlt.resource(
+            write_disposition="replace", # overwrite
+            columns=pyarrow_schema_to_dlt_columns(suppliers_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        )
+    def load_suppliers():
+        # Read CSV and yield data will load in the data from the data_raw file 
+        print("Loading resource: suppliers")
+        file_path = os.path.join(raw_path, "suppliers.csv")
+        suppliersdf = pd.read_csv(file_path)
+        for record in suppliersdf.to_dict(orient="records"):
+            yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
+
+    @dlt.resource( #ordersheader
+            write_disposition="append",
+            columns=pyarrow_schema_to_dlt_columns(orders_header_schema),
+            primary_key="order_id",
+            merge_key="order_id" # is there a reason why there is a merge key? If it's just appending then append on the ts watermark
+        )
+
+    def load_ordersheader(updated_after=dlt.sources.incremental("order_ts")):
+        print("Loading resource: ordersheader")
+        file_path = os.path.join(raw_path, "orders_header.csv")
+        ordersheaderdf = pd.read_csv(file_path)
+        for record in ordersheaderdf.to_dict(orient="records"):
+            if updated_after.last_value is None or record["order_ts"] > updated_after.last_value:
+                    yield record  
+            
+
+    @dlt.resource( #orderslines
+            write_disposition="append",
+            columns=pyarrow_schema_to_dlt_columns(orders_lines_schema),
+            primary_key=["order_id", "line_number"],
+            merge_key=["order_id", "line_number"]
+        )
+
+
+    def load_orderslines(updated_after=dlt.sources.incremental("order_id")):
+        print("Loading resource: orderslines")
+        file_path = os.path.join(raw_path, "orders_lines.csv")
+        orderslinesdf = pd.read_csv(file_path)
+        for record in orderslinesdf.to_dict(orient="records"):
+            if updated_after.last_value is None or record["order_id"] > updated_after.last_value: #it's monotomically increasing
+                yield record
+
+
+    @dlt.resource(#events
+        write_disposition="append",
+        primary_key="event_id",
+        columns=pyarrow_schema_to_dlt_columns(events_schema)
+    )
+    def load_events(updated_after=dlt.sources.incremental("envelope.event_ts")):
+        print("Loading resource: events")       
+        file_path = os.path.join(raw_path, "events.jsonl")  # single file
+        with open(file_path, "r") as f:
+            for line in f:
+                record = json.loads(line)
+                if updated_after.last_value is None or record["envelope"]["event_ts"] > updated_after.last_value: 
+                    record["event_id"] = record["envelope"]["event_id"]  # flatten for primary key
+                    yield record
+
+
+    @dlt.transformer(data_from=load_customers, write_disposition="replace")
+    def customers(record):
         return {
             **record,
             "ingestion_ts": datetime.now(utc_plus_8),
             "src_filename": dlt.current.source_state().get("file")
         }
- 
-     # Apply transformer separately
-    customers_with_audit = dlt.transformer(data_from=load_customers, write_disposition="replace")(add_audit_columns)
-    products_with_audit = dlt.transformer(data_from=load_products, write_disposition="replace")(add_audit_columns)
+
+    @dlt.transformer(data_from=load_products, write_disposition="replace")
+    def products(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
+    @dlt.transformer(data_from=load_stores, write_disposition="replace")
+    def stores(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
+    @dlt.transformer(data_from=load_suppliers, write_disposition="replace")
+    def suppliers(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
     
-    return [customers_with_audit, products_with_audit]
+    @dlt.transformer(data_from=load_ordersheader, write_disposition="append")
+    def ordersheader(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
+    @dlt.transformer(data_from=load_orderslines, write_disposition="append")
+    def orderslines(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
+    @dlt.transformer(data_from=load_events, write_disposition="append")
+    def events(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
+
     
+    return [
+        customers,
+        products,
+        stores,
+        suppliers,
+        ordersheader,
+        orderslines,
+        events
+    ]
+
 
 #   @dlt.resource( #order
 #        name="orders",
@@ -110,18 +233,21 @@ def retail_source(raw_path: str = "data_raw"):
 #Reads from the source
 #Applies transformations (like add_audit_columns) and schema validation
 #Loads into the destination table (customers)
-#pipelineduck = dlt.pipeline(pipeline_name="retail_bronze", destination=duckdb_dest)
+pipelineduck = dlt.pipeline(pipeline_name="retail_bronze_duckdb", destination=duckdb_dest)
+
 pipelinepq = dlt.pipeline(
     pipeline_name="retail_bronze",
     destination=parquet_dest,
     dataset_name="retail_bronze_dataset"
 )
 
-#infoduck = pipelineduck.run(retail_source())
-pipelinepq.drop()  # Clears previous format and schema
-infopq = pipelinepq.run(retail_source(), loader_file_format="parquet")
 
-#print(infoduck)
+##pipelineduck.drop()  # Clears previous format and schema
+##infoduck = pipelineduck.run(retail_source())
+pipelinepq.drop()  # Clears previous format and schema
+infopq = pipelinepq.run(retail_source(), loader_file_format="parquet") # have to specify the file format here as parquet for some reason
+
+##print(infoduck)
 print(infopq)
 
 print( "it's ran")
@@ -133,13 +259,44 @@ print( "it's ran")
 result_products = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/products/*.parquet'"
 ).to_df()
-print("\nProducts table:")
+print("\nProducts table:"
+)
 print(result_products.head())
-
 
 result_customers = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'"
 ).to_df()
 print("Customers table:")
 print(result_customers.head())   # head() avoids dumping thousands of rows
+
+result_stores = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/stores/*.parquet'"
+).to_df()
+print("stores table:")
+print(result_stores.head())   # head() avoids dumping thousands of rows
+
+result_suppliers = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet'"
+).to_df()
+print("suppliers table:")
+print(result_suppliers.head())   # head() avoids dumping thousands of rows
+
+result_ordersheader = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/ordersheader/*.parquet'"
+).to_df()
+print("ordersheader table:")
+print(result_ordersheader.head())   # head() avoids dumping thousands of rows
+
+result_orderslines = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet'"
+).to_df()
+print("orderslines table:")
+print(result_orderslines.head())   # head() avoids dumping thousands of rows
+result_events = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/events/*.parquet'"
+).to_df()
+print("result_events table:")
+print(result_events.head())   # head() avoids dumping thousands of rows
+
+
 

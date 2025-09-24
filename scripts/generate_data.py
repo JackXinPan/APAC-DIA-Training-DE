@@ -438,8 +438,11 @@ def main():
         #qty
         qtyret = random.randint(1,row['qty'])
         # Calculate the time range
+        
         order_ts = row['order_ts']
-        time_diff = (now - order_ts).total_seconds()
+        order_ts = pd.to_datetime(order_ts)
+        time_now = datetime.now(pytz.timezone("Australia/Perth"))
+        time_diff = (time_now- order_ts).total_seconds()
 
         # Generate a random offset within that range
         random_offset = random.uniform(0, time_diff)
