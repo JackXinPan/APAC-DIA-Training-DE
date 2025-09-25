@@ -43,6 +43,9 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, LongType, StringType, TimestampType, IntegerType
 
 
+
+print("Delta import successful!")
+
 # Timezone check
 # Define the UTC+8 timezone
 tz = pytz.timezone("Australia/Perth")  
@@ -406,12 +409,15 @@ def main():
 
     ### Returns (delta)
     returns_path = out / 'returns.delta'
-    # build spark session
+
+    
     spark = SparkSession.builder \
-    .appName("ReturnsDelta") \
-    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .getOrCreate()
+        .appName("DeltaLakeApp") \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .getOrCreate()
+
+
 
     
     # use order_lines as a reference
@@ -421,11 +427,18 @@ def main():
     # Generate base data
     base_data = []
     for i in range(1, returns_count+1):
-        row = df_orders_lines.sample(1).iloc[0] # grab random row from the df
-        #qty
-        qtyret = random.randint(1,row['qty'])
+    # Keep sampling until a valid row with qty ≥ 1 is found
+        while True:
+            row = df_orders_lines.sample(1).iloc[0]
+            qty = row.get('qty', 0)
+
+            if pd.isna(qty) or qty < 1:
+                continue  # resample
+
+            qtyret = random.randint(1, int(qty))
+            break  # valid row found
+
         # Calculate the time range
-        
         order_ts = row['order_ts']
         order_ts = pd.to_datetime(order_ts)
         time_now = datetime.now(tz)
