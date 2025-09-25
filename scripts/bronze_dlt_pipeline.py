@@ -148,7 +148,7 @@ def retail_source(raw_path: str = "data_raw"):
                     record["event_id"] = record["envelope"]["event_id"]  # flatten for primary key
                     yield record
 
-    @dlt.resource(#sensors
+    @dlt.resource(
         write_disposition="append",
         columns=pyarrow_schema_to_dlt_columns(sensors_schema)
     )
@@ -162,6 +162,9 @@ def retail_source(raw_path: str = "data_raw"):
         if updated_after.last_value:
             try:
                 last_ts = datetime.fromisoformat(str(updated_after.last_value).strip())
+                if last_ts.tzinfo is None or last_ts.tzinfo.utcoffset(last_ts) is None: #to check if timezone is naive
+                    last_ts = utc_plus_8.localize(last_ts)
+
             except ValueError:
                 print(f"Invalid last_value format: {updated_after.last_value}")
 
@@ -183,6 +186,7 @@ def retail_source(raw_path: str = "data_raw"):
             if last_ts is None or record_ts > last_ts:
                 yield record
 
+
     @dlt.resource(#exchangerates
         write_disposition="replace",
         columns=pyarrow_schema_to_dlt_columns(exchange_rates_schema)
@@ -193,6 +197,19 @@ def retail_source(raw_path: str = "data_raw"):
         exchangratesdf = pd.read_excel(file_path, engine="openpyxl")  # Use openpyxl for .xlsx file
         for record in exchangratesdf.to_dict(orient="records"):
             yield record
+
+ 
+    @dlt.resource(#shipments
+        write_disposition="append",
+        columns=pyarrow_schema_to_dlt_columns(shipments_schema)
+    )
+    def load_shipments(updated_after=dlt.sources.incremental("shipment_id")):
+        print("Loading resource: Shipments")
+        file_path = os.path.join(raw_path, "shipments.parquet")
+        shipmentsdf = pd.read_parquet(file_path)
+        for record in shipmentsdf.to_dict(orient="records"):
+            if updated_after.last_value is None or record["shipment_id"] > updated_after.last_value: #it's monotomically increasing
+             yield record
 
     @dlt.transformer(data_from=load_customers, write_disposition="replace")
     def customers(record):
@@ -260,7 +277,13 @@ def retail_source(raw_path: str = "data_raw"):
             "ingestion_ts": datetime.now(utc_plus_8),
             "src_filename": dlt.current.source_state().get("file")
         }
-    
+    @dlt.transformer(data_from=load_shipments, write_disposition="append")
+    def shipments(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }    
     
     return [
         customers,
@@ -271,7 +294,9 @@ def retail_source(raw_path: str = "data_raw"):
         orderslines,
         events,
         sensors,
-        exchangerates
+        exchangerates,
+        shipments
+
     ]
 
 
@@ -359,5 +384,30 @@ result_events = duckdb.query(
 print("result_events table:")
 print(result_events.head())  
 
+result_sensors = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/sensors/*.parquet'"
+).to_df()
+print("result_sensors table:")
+print(result_sensors.head())  
+
+er = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/exchangerates/*.parquet'"
+).to_df()
+print("er table:")
+print(er.head())  
+
+result_shipments = duckdb.query(
+    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/shipments/*.parquet'"
+).to_df()
+print("result_shipments table:")
+print(result_shipments.head())  
 
 
+
+# .\scripts\setup_spark_env.ps1
+
+## setup_spark_env.ps1
+# $env:SPARK_HOME = "C:\spark"
+#  $env:JAVA_HOME = "C:\Program Files\Java\jdk-17" 
+# $env:PATH += ";$env:SPARK_HOME\bin;$env:JAVA_HOME\bin"
+# python scripts\generate_data.py
