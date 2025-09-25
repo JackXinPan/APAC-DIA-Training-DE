@@ -148,6 +148,51 @@ def retail_source(raw_path: str = "data_raw"):
                     record["event_id"] = record["envelope"]["event_id"]  # flatten for primary key
                     yield record
 
+    @dlt.resource(#sensors
+        write_disposition="append",
+        columns=pyarrow_schema_to_dlt_columns(sensors_schema)
+    )
+    def load_sensors(updated_after=dlt.sources.incremental("sensor_ts")):
+        print("Loading resource: Sensors")
+        file_path = os.path.join(raw_path, "sensors.csv")
+        sensorsdf = pd.read_csv(file_path)
+
+        # Convert last_value to datetime if it exists
+        last_ts = None
+        if updated_after.last_value:
+            try:
+                last_ts = datetime.fromisoformat(str(updated_after.last_value).strip())
+            except ValueError:
+                print(f"Invalid last_value format: {updated_after.last_value}")
+
+        for record in sensorsdf.to_dict(orient="records"):
+            sensor_ts = record.get("sensor_ts")
+
+            # Check for missing or empty timestamp
+            if sensor_ts is None or str(sensor_ts).strip() == "" or pd.isna(sensor_ts):
+                record["error_reason"] = "Missing or empty sensor_ts"
+                continue
+
+            try:
+                record_ts = datetime.fromisoformat(str(sensor_ts).strip())
+            except ValueError:
+                record["error_reason"] = "Invalid sensor_ts format"
+                continue
+
+            # Compare only if last_ts is valid
+            if last_ts is None or record_ts > last_ts:
+                yield record
+
+    @dlt.resource(#exchangerates
+        write_disposition="replace",
+        columns=pyarrow_schema_to_dlt_columns(exchange_rates_schema)
+    )
+    def load_exchangerates():
+        print("Loading resource: Exchange Rates")      
+        file_path = os.path.join(raw_path, "exchangerates.xlsx")  
+        exchangratesdf = pd.read_excel(file_path, engine="openpyxl")  # Use openpyxl for .xlsx file
+        for record in exchangratesdf.to_dict(orient="records"):
+            yield record
 
     @dlt.transformer(data_from=load_customers, write_disposition="replace")
     def customers(record):
@@ -200,7 +245,22 @@ def retail_source(raw_path: str = "data_raw"):
             "ingestion_ts": datetime.now(utc_plus_8),
             "src_filename": dlt.current.source_state().get("file")
         }
+    @dlt.transformer(data_from=load_sensors, write_disposition="append")
+    def sensors(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
 
+    @dlt.transformer(data_from=load_exchangerates, write_disposition="append")
+    def exchangerates(record):
+        return {
+            **record,
+            "ingestion_ts": datetime.now(utc_plus_8),
+            "src_filename": dlt.current.source_state().get("file")
+        }
+    
     
     return [
         customers,
@@ -209,7 +269,9 @@ def retail_source(raw_path: str = "data_raw"):
         suppliers,
         ordersheader,
         orderslines,
-        events
+        events,
+        sensors,
+        exchangerates
     ]
 
 
@@ -267,36 +329,35 @@ result_customers = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'"
 ).to_df()
 print("Customers table:")
-print(result_customers.head())   # head() avoids dumping thousands of rows
+print(result_customers.head())   
 
 result_stores = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/stores/*.parquet'"
 ).to_df()
 print("stores table:")
-print(result_stores.head())   # head() avoids dumping thousands of rows
+print(result_stores.head())  
 
 result_suppliers = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet'"
 ).to_df()
 print("suppliers table:")
-print(result_suppliers.head())   # head() avoids dumping thousands of rows
+print(result_suppliers.head())   
 
 result_ordersheader = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/ordersheader/*.parquet'"
 ).to_df()
 print("ordersheader table:")
-print(result_ordersheader.head())   # head() avoids dumping thousands of rows
-
+print(result_ordersheader.head())   
 result_orderslines = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet'"
 ).to_df()
 print("orderslines table:")
-print(result_orderslines.head())   # head() avoids dumping thousands of rows
+print(result_orderslines.head())   
 result_events = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/events/*.parquet'"
 ).to_df()
 print("result_events table:")
-print(result_events.head())   # head() avoids dumping thousands of rows
+print(result_events.head())  
 
 
 
