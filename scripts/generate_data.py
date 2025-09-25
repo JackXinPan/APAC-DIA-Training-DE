@@ -45,11 +45,10 @@ from pyspark.sql.types import StructType, StructField, LongType, StringType, Tim
 
 # Timezone check
 # Define the UTC+8 timezone
-utc_plus_8 = pytz.timezone('Australia/Perth')  
-
+tz = pytz.timezone("Australia/Perth")  
 # Get current date in UTC+8
-now = datetime.now(utc_plus_8).date()
-nowtime = datetime.now(utc_plus_8)
+now = datetime.now(tz).date()
+nowtime = datetime.now(tz)
 print("Current date in UTC+8:", now.strftime("%Y-%m-%d %H:%M:%S"))
 def parse_args():
     ap = argparse.ArgumentParser()
@@ -77,7 +76,7 @@ def main():
     event_count = 2000001
     sensor_count = 1000001
     exchangerates_count = 365*3
-    shipment_count = 1000001
+    shipment_count = 1000000
     returns_count = 100001
 
 
@@ -190,7 +189,7 @@ def main():
             order_dt_month = raw_date.replace(day=1)
             # Create a timestamp by combining raw_date with a random time offset
             random_seconds = random.randint(0, 86399)  # Seconds in a day
-            order_ts = datetime.combine(raw_date, datetime.min.time()) + timedelta(seconds=random_seconds)
+            order_ts = tz.localize(datetime.combine(raw_date, datetime.min.time()) + timedelta(seconds=random_seconds))
             order_dt_local = raw_date
             join_ts = datetime(2024,1,1) + timedelta(days=random.randint(0, 400), seconds=random.randint(0, 86399))    
             if random.random() < 0.7:
@@ -246,7 +245,7 @@ def main():
     events_path = out / 'events.jsonl'
     with events_path.open('w', encoding='utf-8') as f:
         for i in range(1, event_count): 
-            event_ts = (datetime.now() - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat()
+            event_ts = (datetime.now(tz) - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat()
             event_date = datetime.fromisoformat(event_ts).date().isoformat()
             event_type = random.choice(["product_view", "cart_add", "checkout", "watchlist", "login", "logout", "signup"])
             user_id = random.choice(customer_ids)
@@ -301,7 +300,7 @@ def main():
 
         for i in range(1, sensor_count):
             #includes anomalies 
-            sensor_ts = (datetime.now() - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat() if random.random() > 0.01 else ''
+            sensor_ts = (datetime.now(tz) - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat() if random.random() > 0.01 else ''
             sensor_dt = datetime.fromisoformat(sensor_ts) if sensor_ts else ''
             sensor_month = sensor_dt.replace(day=1).date().isoformat() if sensor_dt else ''
 
@@ -358,27 +357,15 @@ def main():
 
     # Save to Excel
     df.to_excel(exchangerates_path, index=False)
-
-
-
-    # Shipments parquet sample
-    tbl = pa.table({
-        'shipment_id': pa.array(range(1, 10001), type=pa.int64()),
-        'order_id': pa.array(range(1, 10001), type=pa.int64()),
-        'carrier': pa.array(['AUSPOST']*10000, type=pa.string()),
-        'shipped_at': pa.array([datetime(2024,1,1)+timedelta(days=i%90) for i in range(10000)], type=pa.timestamp('us', tz='UTC+8')),
-        'delivered_at': pa.array([datetime(2024,1,2)+timedelta(days=i%90) for i in range(10000)], type=pa.timestamp('us', tz='UTC+8')),
-        'ship_cost': pa.array([1995]*10000, type=pa.int64()).cast(pa.decimal128(21,2)),
-    })
-    pq.write_table(tbl, out/'shipments.parquet', compression='snappy')
     
-    # shipping
-    sla_days = 5  # SLA for delivery
-    tz = pytz.FixedOffset(480)  # UTC+8 for Perth
+### Shipping
 
+    sla_days = 5  # SLA for delivery
+    
+    shippingorder_ids = None
     # Generate data
     shipment_ids = list(range(1, shipment_count + 1))
-    order_ids = [random.randint(100000, 999999) for _ in range(shipment_count)]
+    shippingorder_ids = [random.choice(order_ids) for _ in range(shipment_count)]
     carriers = ["AUSPOST", "TOLL", "SENDLE", "ARAMEX"]
     carrier_values = [random.choice(carriers) for _ in range(shipment_count)]
 
@@ -403,21 +390,21 @@ def main():
 
     ship_cost_values = [round(random.uniform(5.00, 25.00), 2) for _ in range(shipment_count)]
 
-    # Build Arrow table
+    # Build Shipments table
     table = pa.table({
         "shipment_id": pa.array(shipment_ids, type=pa.int64()),
-        "order_id": pa.array(order_ids, type=pa.int64()),
+        "order_id": pa.array(shippingorder_ids, type=pa.int64()),
         "carrier": pa.array(carrier_values, type=pa.string()),
-        "shipped_at": pa.array(shipped_at_values, type=pa.timestamp("us", tz="UTC+8")),
-        "delivered_at": pa.array(delivered_at_values, type=pa.timestamp("us", tz="UTC+8")),
+        "shipped_at": pa.array(shipped_at_values, type=pa.timestamp("us", tz="Australia/Perth")),
+        "delivered_at": pa.array(delivered_at_values, type=pa.timestamp("us", tz="Australia/Perth")),
         "ship_cost": pa.array(ship_cost_values).cast(pa.decimal128(12, 2)),
     })
 
     # Write to Parquet
-    pq.write_table(table, "shipments.parquet")
+    pq.write_table(table, out/'shipments.parquet', compression='snappy')
 
-    # Returns (delta)
 
+    ### Returns (delta)
     returns_path = out / 'returns.delta'
     # build spark session
     spark = SparkSession.builder \
@@ -441,7 +428,7 @@ def main():
         
         order_ts = row['order_ts']
         order_ts = pd.to_datetime(order_ts)
-        time_now = datetime.now(pytz.timezone("Australia/Perth"))
+        time_now = datetime.now(tz)
         time_diff = (time_now- order_ts).total_seconds()
 
         # Generate a random offset within that range
