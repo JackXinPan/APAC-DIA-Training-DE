@@ -1,8 +1,13 @@
 {{ config(materialized='table', contract={'enforced': true}) }}
 
-with src as (
-  select * from bronze_customers_parquet
+{% set lake_root = '../lake/bronze/parquet/retail_bronze_dataset' %}
+
+-- Step 1: Read from external Parquet file
+with bronze_customers_parquet as (
+  select * from read_parquet('{{ lake_root }}/customers/*.parquet')
 ),
+
+-- Step 2: Apply transformations
 typed as (
   select
     cast(customer_id as bigint) as customer_id,
@@ -15,9 +20,12 @@ typed as (
     cast(latitude as double) as latitude,
     cast(longitude as double) as longitude,
     cast(birth_date as date) as birth_date,
-    cast(join_ts as timestamp) as join_ts_utc,
+    cast(join_ts as timestamp) as join_ts,
     cast(is_vip as boolean) as is_vip,
     cast(gdpr_consent as boolean) as gdpr_consent
-  from src
+  from bronze_customers_parquet
 )
-select * from typed;
+
+-- Step 3: Final output
+select * from typed
+
