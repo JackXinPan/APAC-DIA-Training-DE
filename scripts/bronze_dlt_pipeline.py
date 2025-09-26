@@ -57,7 +57,9 @@ def retail_source(raw_path: str = "data_raw"):
     # customers becomes the destination table, and the @dlt.resource function acts as a data pipeline component that feeds it
     @dlt.resource(
         write_disposition="replace", # overwrite
-        columns=pyarrow_schema_to_dlt_columns(customers_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        columns=pyarrow_schema_to_dlt_columns(customers_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        max_retries=3,
+        retry_delay=1.0
     )
     def load_customers():
         # Read CSV and yield data will load in the data from the data_raw file 
@@ -68,7 +70,9 @@ def retail_source(raw_path: str = "data_raw"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
     @dlt.resource(
         write_disposition="replace", # overwrite
-        columns=pyarrow_schema_to_dlt_columns(products_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        columns=pyarrow_schema_to_dlt_columns(products_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        max_retries=3,
+        retry_delay=1.0
     )
     def load_products():
         # Read CSV and yield data will load in the data from the data_raw file 
@@ -79,8 +83,10 @@ def retail_source(raw_path: str = "data_raw"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
     @dlt.resource(
             write_disposition="replace", # overwrite
-            columns=pyarrow_schema_to_dlt_columns(stores_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-        )
+            columns=pyarrow_schema_to_dlt_columns(stores_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        max_retries=3,
+        retry_delay=1.0
+    )
     def load_stores():
         # Read CSV and yield data will load in the data from the data_raw file
         print("Loading resource: stores") 
@@ -90,8 +96,9 @@ def retail_source(raw_path: str = "data_raw"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
     @dlt.resource(
             write_disposition="replace", # overwrite
-            columns=pyarrow_schema_to_dlt_columns(suppliers_schema)  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-        )
+            columns=pyarrow_schema_to_dlt_columns(suppliers_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+        max_retries=3,
+        retry_delay=1.0        )
     def load_suppliers():
         # Read CSV and yield data will load in the data from the data_raw file 
         print("Loading resource: suppliers")
@@ -102,7 +109,9 @@ def retail_source(raw_path: str = "data_raw"):
 
     @dlt.resource( #ordersheader
             write_disposition="append",
-            columns=pyarrow_schema_to_dlt_columns(orders_header_schema),
+            columns=pyarrow_schema_to_dlt_columns(orders_header_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+            max_retries=3,
+            retry_delay=1.0,
             primary_key="order_id",
             merge_key="order_id" # is there a reason why there is a merge key? If it's just appending then append on the ts watermark
         )
@@ -118,7 +127,9 @@ def retail_source(raw_path: str = "data_raw"):
 
     @dlt.resource( #orderslines
             write_disposition="append",
-            columns=pyarrow_schema_to_dlt_columns(orders_lines_schema),
+            columns=pyarrow_schema_to_dlt_columns(orders_lines_schema), # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
+            max_retries=3,
+            retry_delay=1.0
             primary_key=["order_id", "line_number"],
             merge_key=["order_id", "line_number"]
         )

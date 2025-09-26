@@ -424,23 +424,21 @@ def main():
     # Read into DataFrame    
     df_orders_lines = pd.read_csv(orderslines_path)
 
-    # Generate base data
+
+   #Pre-filter rows with qty ≥ 1
+    valid_order_rows = df_orders_lines[df_orders_lines['qty'].fillna(0) >= 1]
+
+    # Prebatch sampling for performance
+    sampled_rows = valid_order_rows.sample(n=returns_count).reset_index(drop=True)
+    
+  # Generate base data
     base_data = []
-    for i in range(1, returns_count+1):
-    # Keep sampling until a valid row with qty ≥ 1 is found
-        while True:
-            row = df_orders_lines.sample(1).iloc[0]
-            qty = row.get('qty', 0)
-
-            if pd.isna(qty) or qty < 1:
-                continue  # resample
-
-            qtyret = random.randint(1, int(qty))
-            break  # valid row found
+    for i, row in enumerate(sampled_rows.itertuples(index=False), start=1):
+        # Sample a valid row
+        qtyret = random.randint(1, int(row.qty))
 
         # Calculate the time range
-        order_ts = row['order_ts']
-        order_ts = pd.to_datetime(order_ts)
+        order_ts = pd.to_datetime(row.order_ts)
         time_now = datetime.now(tz)
         time_diff = (time_now- order_ts).total_seconds()
 
@@ -448,18 +446,18 @@ def main():
         random_offset = random.uniform(0, time_diff)
 
         # Create return_ts
-        return_ts = order_ts + timedelta(seconds=random_offset)  # return_ts 
+        return_ts = (order_ts + timedelta(seconds=random_offset)).to_pydatetime()  # return_ts cannot be timezone-aware in Spark
         # reason 
         reason = random.choice(["damaged", "wrong item", "changed mind", "late delivery"])
         
         base_data.append((
             i,  # return_id
-            row['order_id'],  # order_id
-            row['product_id'], # product_id
+            row.order_id,  # order_id
+            row.product_id, # product_id
             return_ts, # return_ts
             qtyret,  # qty
-            reason,  # reason
-            row['order_dt_month'] # partitioning
+            reason  # reason
+            #,row.order_dt_month # partitioning
         ))
         
     schema_v1 = StructType([
@@ -473,6 +471,8 @@ def main():
     # Save as Delta table
     df_returns_v1 = spark.createDataFrame(base_data, schema=schema_v1)
     df_returns_v1.write.format("delta").mode("overwrite").save(str(returns_path))
+
+    
 
     #v2 evolution
     evolved_data = []
