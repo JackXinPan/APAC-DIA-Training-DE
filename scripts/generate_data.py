@@ -226,7 +226,7 @@ def main():
             for line_number in range(1, num_lines + 1):
             # Anomoly
                 if random.random() < 0.01:
-                    product_id = f"INVALID_{random.randint(1000,9999)}"
+                    product_id = f"{random.choice(product_ids)*20}"
                     unit_price = round(random.uniform(1, 1000), 4)
                 else:
                     product_id = random.choice(product_ids)
@@ -408,117 +408,118 @@ def main():
 
 
     ### Returns (delta)
-    returns_path = out / 'returns.delta'
 
-    
-    spark = SparkSession.builder \
-        .appName("DeltaLakeApp") \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-        .getOrCreate()
-
+    ## Comment out for now until refactor us of spark session to delta lake
+#"""     returns_path = out / 'returns.delta'
+#
+##    
+##    spark = SparkSession.builder 
+ #       .appName("DeltaLakeApp") 
+ ##       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") 
+  #      .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") 
+ #       .getOrCreate()"""
 
 
     
     # use order_lines as a reference
     # Read into DataFrame    
-    df_orders_lines = pd.read_csv(orderslines_path)
+ #   df_orders_lines = pd.read_csv(orderslines_path)
 
 
    #Pre-filter rows with qty ≥ 1
-    valid_order_rows = df_orders_lines[df_orders_lines['qty'].fillna(0) >= 1]
+  #  valid_order_rows = df_orders_lines[df_orders_lines['qty'].fillna(0) >= 1]
 
     # Prebatch sampling for performance
-    sampled_rows = valid_order_rows.sample(n=returns_count).reset_index(drop=True)
+  #  sampled_rows = valid_order_rows.sample(n=returns_count).reset_index(drop=True)
     
   # Generate base data
-    base_data = []
-    for i, row in enumerate(sampled_rows.itertuples(index=False), start=1):
+  #  base_data = []
+  #  for i, row in enumerate(sampled_rows.itertuples(index=False), start=1):
         # Sample a valid row
-        qtyret = random.randint(1, int(row.qty))
+  #      qtyret = random.randint(1, int(row.qty))
 
         # Calculate the time range
-        order_ts = pd.to_datetime(row.order_ts)
-        time_now = datetime.now(tz)
-        time_diff = (time_now- order_ts).total_seconds()
+  #      order_ts = pd.to_datetime(row.order_ts)
+  #      time_now = datetime.now(tz)
+  #      time_diff = (time_now- order_ts).total_seconds()
 
         # Generate a random offset within that range
-        random_offset = random.uniform(0, time_diff)
+ #       random_offset = random.uniform(0, time_diff)
 
         # Create return_ts
-        return_ts = (order_ts + timedelta(seconds=random_offset)).to_pydatetime()  # return_ts cannot be timezone-aware in Spark
+#        return_ts = (order_ts + timedelta(seconds=random_offset)).to_pydatetime()  # return_ts cannot be timezone-aware in Spark
         # reason 
-        reason = random.choice(["damaged", "wrong item", "changed mind", "late delivery"])
+#        reason = random.choice(["damaged", "wrong item", "changed mind", "late delivery"])
         
-        base_data.append((
-            i,  # return_id
-            row.order_id,  # order_id
-            row.product_id, # product_id
-            return_ts, # return_ts
-            qtyret,  # qty
-            reason  # reason
+#        base_data.append((
+#            i,  # return_id
+#            row.order_id,  # order_id
+#            row.product_id, # product_id
+#            return_ts, # return_ts
+#            qtyret,  # qty
+#            reason  # reason
             #,row.order_dt_month # partitioning
-        ))
+#        ))
         
-    schema_v1 = StructType([
-        StructField("return_id", LongType(), False),
-        StructField("order_id", LongType(), False),
-        StructField("product_id", StringType(), False),
-        StructField("return_ts", TimestampType(), False),
-        StructField("qty", IntegerType(), False),
-        StructField("reason", StringType(), False)
-    ])
+#    schema_v1 = StructType([
+#        StructField("return_id", LongType(), False),
+#        StructField("order_id", LongType(), False),
+#        StructField("product_id", StringType(), False),
+#        StructField("return_ts", TimestampType(), False),
+#        StructField("qty", IntegerType(), False),
+#        StructField("reason", StringType(), False)
+#    ])
     # Save as Delta table
-    df_returns_v1 = spark.createDataFrame(base_data, schema=schema_v1)
-    df_returns_v1.write.format("delta").mode("overwrite").save(str(returns_path))
+#    df_returns_v1 = spark.createDataFrame(base_data, schema=schema_v1)
+#    df_returns_v1.write.format("delta").mode("overwrite").save(str(returns_path))
 
     
 
     #v2 evolution
-    evolved_data = []
+#    evolved_data = []
     #map evolved schema
-    reason_map = {
-    "damaged": "DMG",
-    "wrong item": "WRONG_IT",
-    "changed mind": "CH_MND",
-    "late delivery": "LT_DELIV"
-    }
-    for i in range(returns_count + 1, returns_count + 101):  # 100 new rows to highlight append
-        row = df_orders_lines.sample(1).iloc[0]
-        order_id = row['order_id']
-        order_ts = row['order_ts']
+#    reason_map = {
+#    "damaged": "DMG",
+#    "wrong item": "WRONG_IT",
+#    "changed mind": "CH_MND",
+#    "late delivery": "LT_DELIV"
+#    }
+#    for i in range(returns_count + 1, returns_count + 101):  # 100 new rows to highlight append
+#        row = df_orders_lines.sample(1).iloc[0]
+##        order_id = row['order_id']
+#        order_ts = row['order_ts']
 
-        qtyret = random.randint(1, max(1, int(row['qty'])))
-        time_diff = (now - order_ts).total_seconds()
-        return_ts = order_ts + timedelta(seconds=random.uniform(0, time_diff))
+#        qtyret = random.randint(1, max(1, int(row['qty'])))
+#        time_diff = (now - order_ts).total_seconds()
+#        return_ts = order_ts + timedelta(seconds=random.uniform(0, time_diff))
 
-        reason = random.choice(list(reason_map.keys()))
-        reason_code = reason_map[reason]
-
-        evolved_data.append((
-            i,
-            int(order_id),
-            row['product_id'],
-            return_ts,
-            qtyret,
-            reason,
-            row['order_dt_month'], # partitioning
-            reason_code # added evolution with reasoncode
-        ))
-    # Updated schema with return_reason_code
-    schema_v2 = StructType([
-        StructField("return_id", LongType(), False),
-        StructField("order_id", LongType(), False),
-        StructField("product_id", StringType(), False),
-        StructField("return_ts", TimestampType(), False),
-        StructField("qty", IntegerType(), False),
-        StructField("reason", StringType(), False),
-        StructField("return_reason_code", StringType(), True) # evolved schema
-    ])
+#        reason = random.choice(list(reason_map.keys()))
+#        reason_code = reason_map[reason]
+#
+##        evolved_data.append((
+#            i,
+#            int(order_id),
+#            row['product_id'],
+#            return_ts,
+#            qtyret,
+#            reason,
+#            row['order_dt_month'], # partitioning
+#            reason_code # added evolution with reasoncode
+#        ))
+##    # Updated schema with return_reason_code
+#    schema_v2 = StructType([
+#        StructField("return_id", LongType(), False),
+#        StructField("order_id", LongType(), False),
+#        StructField("product_id", StringType(), False),
+#        StructField("return_ts", TimestampType(), False),
+#        StructField("qty", IntegerType(), False),
+##        StructField("reason", StringType(), False),
+##        StructField("return_reason_code", StringType(), True) # evolved schema
+##    ])
 
     # Save as Delta table with schema evolution
-    df_returns_v2 = spark.createDataFrame(base_data, schema=schema_v2)
-    df_returns_v2.write.format("delta").mode("append").option("mergeSchema", "true").save(str(returns_path))
+##    df_returns_v2 = spark.createDataFrame(base_data, schema=schema_v2)
+##    df_returns_v2.write.format("delta").mode("append").option("mergeSchema", "true").save(str(returns_path))
 
 
     print(f"✅ Sample raw written to {out}. Expand to required volumes per /docs.")
