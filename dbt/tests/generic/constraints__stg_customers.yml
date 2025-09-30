@@ -21,6 +21,7 @@ models:
       - name: email
         data_type: string
         description: "Customer's email address"
+        tests: [email]
       - name: phone
         data_type: string
         description: "Customer's phone number"

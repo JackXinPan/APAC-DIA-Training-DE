@@ -18,6 +18,9 @@ models:
           - relationships:
               to: ref('stg_orders')
               field: order_id
+          - foreign_key_violation_rate:
+              parent_model: ref('stg_orders')
+              parent_key: order_id
       - name: carrier
         data_type: string
         description: "Shipping carrier used for the delivery"
