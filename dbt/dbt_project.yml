@@ -22,3 +22,9 @@ models:
       +schema: silver
     gold:
       +schema: gold
+
+
+#+8 timezone + lake folder source path
+vars:
+  default_timezone: 'Australia/Perth'
+  lake_root: '../lake/bronze/parquet/retail_bronze_dataset'

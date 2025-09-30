@@ -1,10 +1,11 @@
-{{ config(materialized='table', contract={'enforced': true}) }}
+{% set src_table = 'customers' %}
 
-{% set lake_root = '../lake/bronze/parquet/retail_bronze_dataset' %}
+{{ config(materialized='table', contract={'enforced': true}) }}
+{% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file
-with bronze_customers_parquet as (
-  select * from read_parquet('{{ lake_root }}/customers/*.parquet')
+with bronze_parquet as (
+  select * from read_parquet('{{ lake_root }}/{{ src_table }}/*.parquet')
 ),
 
 -- Step 2: Apply transformations
@@ -23,7 +24,7 @@ typed as (
     cast(join_ts as timestamp) as join_ts,
     cast(is_vip as boolean) as is_vip,
     cast(gdpr_consent as boolean) as gdpr_consent
-  from bronze_customers_parquet
+  from bronze_parquet
 )
 
 -- Step 3: Final output

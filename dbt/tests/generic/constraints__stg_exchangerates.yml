@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_exchangerates
+    description: "Staging model for exchange rates to AUD"
+    columns:
+      - name: date
+        data_type: date
+        description: "Date of the exchange rate"
+        tests: [not_null]
+      - name: currency
+        data_type: string
+        description: "Currency code"
+        tests: [not_null]
+      - name: rate_to_aud
+        data_type: decimal(18, 8)
+        description: "Exchange rate to AUD"
+        tests: [not_null]

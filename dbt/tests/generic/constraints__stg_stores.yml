@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: stg_stores
+    description: "Staging model for stores"
+    columns:
+      - name: store_id
+        data_type: bigint
+        description: "Unique store identifier"
+        tests: [not_null, unique]
+      - name: store_code
+        data_type: string
+        description: "Store code"
+        tests: [not_null, unique]
+      - name: name
+        data_type: string
+        description: "Store name"
+        tests: [not_null]
+      - name: channel
+        data_type: string
+        description: "Sales channel"
+      - name: region
+        data_type: string
+        description: "Geographic region"
+      - name: state
+        data_type: string
+        description: "State or province"
+      - name: latitude
+        data_type: double
+        description: "Latitude coordinate"
+        tests: [valid_latitude]
+      - name: longitude
+        data_type: double
+        description: "Longitude coordinate"
+        tests: [valid_longitude]
+      - name: open_dt
+        data_type: date
+        description: "Store opening date"
+      - name: close_dt
+        data_type: date
+        description: "Store closing date"

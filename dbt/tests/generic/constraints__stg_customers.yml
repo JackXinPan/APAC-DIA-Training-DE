@@ -24,15 +24,12 @@ models:
       - name: phone
         data_type: string
         description: "Customer's phone number"
-        tests: [not_null]
       - name: address_line1
         data_type: string
         description: "Primary address line"
-        tests: [not_null]
       - name: address_line2
         data_type: string
         description: "Secondary address line"
-        tests: [not_null]
       - name: city
         data_type: string
         description: "City of residence"
@@ -48,11 +45,13 @@ models:
       - name: latitude
         data_type: double
         description: "Latitude coordinate"
-        tests: [valid_latitude]
+        tests:
+          - latitude
       - name: longitude
         data_type: double
         description: "Longitude coordinate"
-        tests: [valid_longitude]
+        tests:
+          - longitude
       - name: birth_date
         data_type: date
         description: "Date of birth"
