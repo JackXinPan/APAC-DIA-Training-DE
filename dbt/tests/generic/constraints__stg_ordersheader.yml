@@ -24,8 +24,8 @@ models:
               to: ref('stg_customers')
               field: customer_id  
           - foreign_key_violation_rate:
-            parent_model: ref('stg_customers')
-            parent_key: customer_id
+              parent_model: ref('stg_customers')
+              parent_key: customer_id
 
       - name: store_id
         data_type: bigint
@@ -35,8 +35,8 @@ models:
               to: ref('stg_stores')
               field: store_id
           - foreign_key_violation_rate:
-            parent_model: ref('stg_stores')
-            parent_key: store_id
+              parent_model: ref('stg_stores')
+              parent_key: store_id
       - name: channel
         data_type: string
         description: "Sales channel"

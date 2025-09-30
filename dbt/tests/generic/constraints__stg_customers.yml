@@ -21,7 +21,8 @@ models:
       - name: email
         data_type: string
         description: "Customer's email address"
-        tests: [email]
+        tests:
+         - email
       - name: phone
         data_type: string
         description: "Customer's phone number"
@@ -56,6 +57,9 @@ models:
       - name: birth_date
         data_type: date
         description: "Date of birth"
+      - name: age
+        data_type: bigint
+        description: "Age"        
       - name: join_ts
         data_type: timestamp
         description: "Timestamp when the customer joined"

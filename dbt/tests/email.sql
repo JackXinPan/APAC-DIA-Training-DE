@@ -1,4 +1,4 @@
-{% test {% test email(model, column_name) %}
+{% test email(model, column_name) %}
 (model, column_name) %}
     SELECT *
     FROM {{ model }}

@@ -24,8 +24,8 @@ models:
               to: ref('stg_products')
               field: product_id
           - foreign_key_violation_rate:
-            parent_model: ref('stg_products')
-            parent_key: product_id
+              parent_model: ref('stg_products')
+              parent_key: product_id
       - name: qty
         data_type: int
         description: "Quantity ordered"
