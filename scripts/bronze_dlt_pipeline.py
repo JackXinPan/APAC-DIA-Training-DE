@@ -48,6 +48,14 @@ def pyarrow_schema_to_dlt_columns(schema: pa.Schema) -> dict:
     }
 
 
+# Helper function to enrich records
+def enrich_record(record):
+    return {
+        **record,
+        "ingestion_ts": datetime.now(utc_plus_8),
+        "src_filename": dlt.current.source_state().get("file")
+    }
+
 
 #define source pipeline to read raw data from the folder data_raw
 @dlt.source(name="retail_bronze") # schema
@@ -58,8 +66,6 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource(
         write_disposition="replace", # overwrite
         columns=pyarrow_schema_to_dlt_columns(customers_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-        max_retries=3,
-        retry_delay=1.0
     )
     def load_customers():
         # Read CSV and yield data will load in the data from the data_raw file 
@@ -71,8 +77,6 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource(
         write_disposition="replace", # overwrite
         columns=pyarrow_schema_to_dlt_columns(products_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-        max_retries=3,
-        retry_delay=1.0
     )
     def load_products():
         # Read CSV and yield data will load in the data from the data_raw file 
@@ -84,8 +88,6 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource(
             write_disposition="replace", # overwrite
             columns=pyarrow_schema_to_dlt_columns(stores_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-        max_retries=3,
-        retry_delay=1.0
     )
     def load_stores():
         # Read CSV and yield data will load in the data from the data_raw file
@@ -97,8 +99,7 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource(
             write_disposition="replace", # overwrite
             columns=pyarrow_schema_to_dlt_columns(suppliers_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-        max_retries=3,
-        retry_delay=1.0        )
+    )
     def load_suppliers():
         # Read CSV and yield data will load in the data from the data_raw file 
         print("Loading resource: suppliers")
@@ -110,8 +111,6 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource( #ordersheader
             write_disposition="append",
             columns=pyarrow_schema_to_dlt_columns(orders_header_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-            max_retries=3,
-            retry_delay=1.0,
             primary_key="order_id",
             merge_key="order_id" # is there a reason why there is a merge key? If it's just appending then append on the ts watermark
         )
@@ -128,8 +127,6 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.resource( #orderslines
             write_disposition="append",
             columns=pyarrow_schema_to_dlt_columns(orders_lines_schema), # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-            max_retries=3,
-            retry_delay=1.0
             primary_key=["order_id", "line_number"],
             merge_key=["order_id", "line_number"]
         )
@@ -222,79 +219,48 @@ def retail_source(raw_path: str = "data_raw"):
             if updated_after.last_value is None or record["shipment_id"] > updated_after.last_value: #it's monotomically increasing
              yield record
 
+    
+# Define transformers with appropriate write dispositions
     @dlt.transformer(data_from=load_customers, write_disposition="replace")
     def customers(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
 
     @dlt.transformer(data_from=load_products, write_disposition="replace")
     def products(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_stores, write_disposition="replace")
     def stores(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_suppliers, write_disposition="replace")
     def suppliers(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
-    
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_ordersheader, write_disposition="append")
     def ordersheader(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_orderslines, write_disposition="append")
     def orderslines(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_events, write_disposition="append")
     def events(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_sensors, write_disposition="append")
     def sensors(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
 
     @dlt.transformer(data_from=load_exchangerates, write_disposition="append")
     def exchangerates(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }
+        return enrich_record(record)
+
     @dlt.transformer(data_from=load_shipments, write_disposition="append")
     def shipments(record):
-        return {
-            **record,
-            "ingestion_ts": datetime.now(utc_plus_8),
-            "src_filename": dlt.current.source_state().get("file")
-        }    
+        return enrich_record(record)
+        
     
     return [
         customers,
@@ -309,24 +275,6 @@ def retail_source(raw_path: str = "data_raw"):
         shipments
 
     ]
-
-
-#   @dlt.resource( #order
-#        name="orders",
-#        write_disposition="append",
-#       primary_key="order_id",
-#        merge_key="order_id"
-#    )
-#    def load_orders():
-#        # Incremental loading with automatic dedup
-#        pass
-#   return [
-#        add_audit_columns,
-#        load_orders
-#        ,load_customers
-        # ... other resources
-#    ]
-
 #When you run pipeline.run(retail_source()), DLT orchestrates the whole flow:
 #Reads from the source
 #Applies transformations (like add_audit_columns) and schema validation
@@ -352,8 +300,6 @@ print( "it's ran")
 
 #try to connect
 # Query directly from the Parquet file
-# Query customers
-# Query products
 result_products = duckdb.query(
     "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/products/*.parquet'"
 ).to_df()
