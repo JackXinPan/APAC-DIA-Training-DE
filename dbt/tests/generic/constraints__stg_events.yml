@@ -1,0 +1,101 @@
+version: 2
+
+models:
+  - name: stg_events
+    description: "Staging model for user events with enforced column contracts"
+    columns:
+      - name: event_id
+        data_type: bigint
+        description: "Unique identifier for the event"
+        tests: [not_null, unique]
+
+      - name: env_event_ts
+        data_type: timestamp
+        description: "Timestamp when the event occurred (envelope)"
+
+      - name: payload_event_ts
+        data_type: timestamp
+        description: "Timestamp when the event occurred (payload)"
+
+      - name: event_type
+        data_type: string
+        description: "Type of event"
+        tests:
+          - accepted_values:
+              values: ["product_view", "cart_add", "checkout", "watchlist"]
+
+      - name: user_id
+        data_type: bigint
+        description: "Identifier of the user who triggered the event"
+
+      - name: session_id
+        data_type: string
+        description: "Session identifier for the event"
+
+      - name: event_date
+        data_type: date
+        description: "Date of the event"
+
+      - name: payload_event_ts
+        data_type: timestamp
+        description: "Timestamp from the payload"
+
+      - name: device
+        data_type: string
+        description: "Device type used during the event"
+
+      - name: ip_address
+        data_type: string
+        description: "IP address of the user"
+
+      - name: latitude
+        data_type: double
+        description: "Latitude from geo location"
+        tests:
+          - latitude
+
+      - name: longitude
+        data_type: double
+        description: "Longitude from geo location"
+        tests:
+          - longitude
+
+      - name: action
+        data_type: string
+        description: "Action"
+        tests:
+          - accepted_values:
+              values: ["click", "view", "purchase", null]
+
+      - name: device
+        data_type: string
+        description: "Action"
+        tests:
+          - accepted_values:
+              values: ["mobile", "desktop", null]
+
+      - name: logout_reason
+        data_type: string
+        description: "Action"
+        tests:
+          - accepted_values:
+              values: ["timeout", "manual", "error", null]
+  
+      - name: product_id
+        data_type: bigint
+        description: "Product identifier"
+
+      - name: discount_coupon
+        data_type: boolean
+        description: "Product identifier"
+
+      - name: session_duration
+        data_type: integer
+        description: "Session"
+
+      - name: price
+        data_type: double
+        description: "Price"
+        tests: [not_negative]
+
+

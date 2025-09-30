@@ -1,4 +1,4 @@
-{% test valid_latitude(model, column_name) %}
+{% test latitude(model, column_name) %}
     SELECT *
     FROM {{ model }}
     WHERE {{ column_name }} IS NOT NULL

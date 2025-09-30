@@ -1,5 +1,5 @@
+{% set src_table = 'shipments' %}
 
-{% set src_table = 'exchangerates' %}
 {{ config(materialized='table', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
@@ -10,12 +10,16 @@ with bronze_parquet as (
 
 -- Step 2: Apply transformations
 typed as (
-  select
-    cast(date as date) as date,
-    cast(currency as string) as currency,
-    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud
+    select
+        cast(shipment_id as bigint) as shipment_id,
+        cast(order_id as bigint) as order_id,
+        cast(carrier as string) as carrier,
+        cast(shipped_at as timestamp) as shipped_at,
+        cast(delivered_at as timestamp) as delivered_at,
+        cast(ship_cost as numeric(12, 2)) as ship_cost
   from bronze_parquet
 )
 
 -- Step 3: Final output
 select * from typed
+

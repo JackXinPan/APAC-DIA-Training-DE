@@ -12,16 +12,24 @@ with bronze_parquet as (
 typed as (
 
   select
-    cast(order_id as bigint) as order_id,
-    cast(order_ts as timestamp) as order_ts,
-    cast(order_dt_local as date) as order_dt_local,
-    cast(customer_id as bigint) as customer_id,
-    cast(store_id as bigint) as store_id,
-    cast(channel as varchar) as channel,
-    cast(payment_method as varchar) as payment_method,
-    cast(coupon_code as varchar) as coupon_code,
-    cast(shipping_fee as decimal(12, 2)) as shipping_fee,
-    cast(currency as varchar) as currency
+    cast(envelope__event_id as bigint) as event_id,
+    cast(envelope__event_ts as timestamp) as env_event_ts,
+    cast(envelope__event_type as string) as event_type,
+    cast(envelope__user_id as bigint) as user_id,
+    cast(envelope__session_id as string) as session_id,
+    cast(envelope__event_date as date) as event_date,
+    cast(payload__event_ts as timestamp) as payload_event_ts,
+    cast(payload__device as string) as device,
+    cast(payload__ip_address as string) as ip_address,
+    cast(payload__geo_location__lat as double) as latitude,
+    cast(payload__geo_location__lon as double) as longitude,
+    cast(payload__product_id as bigint) as product_id,
+    cast(payload__price as double) as price,
+    cast(payload__action as string) as action,
+    cast(payload__discount_coupon as boolean) as discount_coupon,
+    cast(payload__session_duration as int) as session_duration,
+    cast(payload__logout_reason as string) as logout_reason
+
   from bronze_parquet
 )
 

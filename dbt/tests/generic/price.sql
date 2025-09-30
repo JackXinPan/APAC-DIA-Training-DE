@@ -1,4 +1,3 @@
---test invalid pricing
 {% test not_negative(model, column_name) %}
     select *
     from {{ model }}
