@@ -21,13 +21,13 @@ typed as (
     address_line2, 
     city, 
     cast(state_region as string) as state_region,
-    postcode,
+    cast(postcode as BIGINT) as postcode,
     cast(country_code as string) as country_code,
     cast(latitude as double) as latitude,
     cast(longitude as double) as longitude,
     cast(birth_date as date) as birth_date,   
 -- Derive age
-    datediff('year', birth_date, current_date) as age,
+    datediff('year', cast(birth_date as date), current_date) as age,
     cast(join_ts as timestamp) as join_ts,
     cast(is_vip as boolean) as is_vip,
     cast(gdpr_consent as boolean) as gdpr_consent

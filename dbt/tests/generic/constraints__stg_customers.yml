@@ -39,7 +39,7 @@ models:
         data_type: string
         description: "State or region"
       - name: postcode
-        data_type: string
+        data_type: bigint
         description: "Postal code"
       - name: country_code
         data_type: string
