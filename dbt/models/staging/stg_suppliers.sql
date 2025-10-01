@@ -17,9 +17,22 @@ select
     cast(name as string) as name,
     cast(country_code as string) as country_code,
     cast(lead_time_days as int) as lead_time_days,
-    cast(preffered as boolean) as preferred
+    cast(preffered as boolean) as preferred,
+      row_number() over (
+        partition by supplier_code
+        order by supplier_id asc  
+      ) as row_num
+
 from bronze_parquet
 )
 
 -- Step 3: Final output
-select * from typed
+select supplier_id,
+        supplier_code,
+        name,
+        country_code,
+        lead_time_days,
+        preferred
+
+ from typed where row_num = 1
+ 

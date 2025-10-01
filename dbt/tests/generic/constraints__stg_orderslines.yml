@@ -6,7 +6,7 @@ models:
     description: "Staging model for order line items"   
     tests:
       - compositekey:
-          combination_of_columns: ['order_id', 'line_number']
+          column_names: ['order_id', 'line_number']
     columns:
       - name: order_id
         data_type: bigint

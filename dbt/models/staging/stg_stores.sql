@@ -22,9 +22,27 @@ select
     cast(longitude as double) as longitude,
     cast(open_dt as date) as open_dt,
     case when trim(close_dt) = '' THEN NULL ELSE cast(close_dt as date)
-        END AS close_dt 
+        END AS close_dt,
+      row_number() over (
+        partition by store_code
+        order by store_id asc 
+      ) as row_num
+ 
 from bronze_parquet
 )
 
 -- Step 3: Final output
-select * from typed
+select store_id,
+        store_code,
+        name,
+        channel,
+        region,
+        state,
+        latitude,
+        longitude,
+        open_dt,
+        close_dt
+ from typed
+where latitude between -90 and 90
+and longitude between -180 and 180 
+and row_num = 1dbt

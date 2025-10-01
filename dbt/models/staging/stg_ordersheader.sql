@@ -22,9 +22,27 @@ typed as (
     cast(coupon_code as varchar) as coupon_code,
     cast(shipping_fee as decimal(12, 2)) as shipping_fee,
     cast(currency as varchar) as currency
+, --deduplicate based on order_id, keeping the latest order_ts
+        row_number() over (
+            partition by order_id
+            order by order_ts desc  -- or any other logic to keep the "latest" or "first"
+        ) as row_num
+
   from bronze_parquet
 )
 
--- Step 3: Final output
-select * from typed
+-- Step 3: Final output deduplication
+select order_id,
+       order_ts,
+       order_dt_local,
+       customer_id,
+       store_id,
+       channel,
+       payment_method,
+       coupon_code,
+       shipping_fee,
+       currency
+from typed
+where row_num = 1
+
 

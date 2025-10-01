@@ -1,7 +1,7 @@
-
-{% macro compositekey(model, combination_of_columns) %}
-    select {{ combination_of_columns | join(', ') }}
+{% test compositekey(model, column_names) %}
+    select {{ column_names | join(', ') }}, count(*) as record_count
     from {{ model }}
-    group by {{ combination_of_columns | join(', ') }}
+    group by {{ column_names | join(', ') }}
     having count(*) > 1
-{% endmacro %}
+{% endtest %}
+

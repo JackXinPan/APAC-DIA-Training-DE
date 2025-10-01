@@ -22,3 +22,9 @@ typed as (
 
 -- Step 3: Final output
 select * from typed
+WHERE 
+ product_id IN (
+    SELECT product_id
+    FROM main_stg.stg_products
+) --cleaned out product ids due to intentdbt ruional anomalies or incorrect product ids. to keep referential integrity
+

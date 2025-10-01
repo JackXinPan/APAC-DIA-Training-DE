@@ -30,10 +30,37 @@ typed as (
     datediff('year', cast(birth_date as date), current_date) as age,
     cast(join_ts as timestamp) as join_ts,
     cast(is_vip as boolean) as is_vip,
-    cast(gdpr_consent as boolean) as gdpr_consent
+    cast(gdpr_consent as boolean) as gdpr_consent,
+      row_number() over (
+        partition by natural_key
+        order by join_ts desc  -- Keep latest join_ts per natural_key
+      ) as row_num
+
   from bronze_parquet
 )
 
--- Step 3: Final output
-select * from typed
-
+-- Step 3: Final output with deduplication
+select customer_id,
+       natural_key,
+       first_name,
+       last_name,
+       email,
+       phone,
+       address_line1, 
+       address_line2, 
+       city, 
+       state_region,
+       postcode,
+       country_code,
+       latitude,
+       longitude,
+       birth_date,   
+       age,
+       join_ts,
+       is_vip,
+       gdpr_consent 
+ from typed
+where row_num = 1
+and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 
+and latitude between -90 and 90
+and longitude between -180 and 180

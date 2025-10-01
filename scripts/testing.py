@@ -1,57 +1,74 @@
+# Generate synthetic raw data locally with controlled edge cases.
+# Usage: python scripts/generate_data.py --seed 42 --out data_raw
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import argparse, os, pathlib, random
-from datetime import datetime, timedelta, date
 import numpy as np
 from faker import Faker
-from faker_commerce import Provider
+from datetime import datetime, timedelta, date
 from mimesis import Person, Address
 import rstr
 import pyarrow as pa
 import pyarrow.parquet as pq
-import xlsxwriter
 
-from faker import Faker
+#for commerce synthetic data
 from faker_commerce import Provider
-from decimal import Decimal, ROUND_HALF_UP
 
-fake = Faker()
-fake.add_provider(Provider)
+#timezone check
+import pytz
 
-def get_capped_price(max_value=10000):
-    # Generate raw price
-    raw_price = fake.ecommerce_price()
-    
-    # Convert to Decimal and round to 4 places
-    price = Decimal(str(raw_price)).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
-    
-    # Cap the price
-    return min(price, Decimal(str(max_value)))
+# random character/ digit fix
+import string
 
-# Generate 5 products
-for _ in range(5):
-    print("Product Name:", fake.ecommerce_name())
-    print("Product Category:", fake.ecommerce_category())
-    print("Product Subcategory:", fake.ecommerce_material())
-    print("Price: $", get_capped_price())
-    print("---")
+# Define the correct character set
+charset = string.ascii_uppercase + string.digits 
+
+# read csv
+import csv
+
+#JSON
+import json
+import uuid
+
+#xlsx
+import pandas as pd
+
+#shipment pq
+import pytz
+
+# returns delta
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, LongType, StringType, TimestampType, IntegerType
 
 
-import random
-from decimal import Decimal, ROUND_HALF_UP
+def parse_args():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--seed', type=int, default=42)
+    ap.add_argument('--out', type=str, default='data_raw')
+    return ap.parse_args()
+
+def ensure_dir(p): pathlib.Path(p).mkdir(parents=True, exist_ok=True)
 
 
-print(dir(fake))
-# List of common currency codes
-currency_codes = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CHF', 'CNY']
+args = parse_args()
+random.seed(args.seed); np.random.seed(args.seed)
+out = pathlib.Path(args.out); ensure_dir(out)
 
-# Generate random price between 1 and 10000, rounded to 4 decimal places
-price = Decimal(str(random.uniform(1, 10000))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+#Add duplicate order_id for anomaly
+ordersheader_path = out/'orders_header.csv'
+orders_data = pd.read_csv(ordersheader_path)
+transaction_count = len(orders_data)
 
-# Pick a random currency
-currency = random.choice(currency_codes)
+# Determine how many duplicates to insert (0.5% of total)
+duplicate_count = int(transaction_count * 0.005)
 
-print("Current Price:", price)
-print("Currency:", currency)
+# Randomly select indices to duplicate
+duplicate_indices = random.sample(range(len(orders_data)), duplicate_count)
 
-# Random price (DECIMAL 12,4 style)
-price = round(random.uniform(1, 10000), 4)
-print(price)
+# Append duplicates to the CSV
+with ordersheader_path.open('a', encoding='utf-8') as f:
+    for idx in duplicate_indices:
+        row = orders_data.iloc[idx]
+        f.write(','.join(map(str, row.values)) + '\n')

@@ -53,6 +53,8 @@ tz = pytz.timezone("Australia/Perth")
 now = datetime.now(tz).date()
 nowtime = datetime.now(tz)
 print("Current date in UTC+8:", now.strftime("%Y-%m-%d %H:%M:%S"))
+
+charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument('--seed', type=int, default=42)
@@ -127,49 +129,22 @@ def main():
                 product_ids.append(i) # transactions assumed to not include discontinued products transactions date back 200 days
                 product_price_map[i] = current_price # transactions assumed to not include discontinued products transactions date back 200 days
             f.write(f"{i},{nk},{fake.ecommerce_name()},{fake.ecommerce_category()},{fake.ecommerce_material()},{current_price},{fake.currency_code()},{introduced_dt},{discontinued_dt},{is_discontinued}\n")
-    #Stores
-    existing_nks = [] # for duplicates
-    stores_path = out/'stores.csv'
-    with stores_path.open('w', encoding='utf-8') as f:
-        f.write('store_id,store_code,name,channel,region,state,latitude,longitude,open_dt,close_dt\n')
-        for i in range(1, store_count):                 
-            if random.random() < 0.01 and existing_nks:  # 1% chance to reuse an existing nk
-                nk = random.choice(existing_nks)
-                channel = 'online' if nk.startswith('O-') else 'retail'
-            else:
-                if random.random() < 0.5:
-                    channel = 'online'
-                    nk = 'O-' + rstr.rstr(charset, 8)
-                else:
-                    channel = 'retail'
-                    nk = 'R-' + rstr.rstr(charset, 8)
-                existing_nks.append(nk)
-#                store_code_map[i] = nk            
-            open_dt = date.today() - timedelta(days=random.randint(0, 2000))
-            # Determine discontinued date and indicator
-            if random.random() < 0.2:  # 20% chance of being discontinued
-                days_since_intro = (now - open_dt).days
-                close_dt = open_dt + timedelta(days=random.randint(0, days_since_intro))
-            else:
-                close_dt = None
-            if close_dt is None or (now - close_dt).days > transaction_backdate:
-                    store_ids.append(i)
-                    store_channel_map[i] = channel
-            # Format close_dt for writing (handle None safely)
-            open_dt = open_dt.isoformat()
-            close_dt = close_dt.isoformat() if close_dt else ''
 
-            #lat long
-            latitude = fake.latitude() if random.random() > 0.01 else float(fake.latitude()) + random.uniform(1000,6000)
-            longitude = fake.longitude() if random.random() > 0.01 else float(fake.longitude()) + random.uniform(1000,6000)
-            f.write(f"{i},{nk},{'Insight ' + fake.city().replace(',',' ')},{channel},{fake.country().replace(',',' ')},{fake.state()},{latitude},{longitude},{open_dt}, {close_dt}\n")
-    #Suppliers
     suppliers_path = out/'suppliers.csv'
+    used_codes = set()  # To track used supplier_codes
     with suppliers_path.open('w', encoding='utf-8') as f:
         f.write('supplier_id,supplier_code,name,country_code,lead_time_days,preffered\n')
         for i in range(1, supplier_count):  
             supplier_ids.append(i)
-            nk =  'S-' + rstr.rstr(charset, 4)         
+
+            # Ensure unique supplier_code
+            while True:
+                nk = 'S-' + rstr.rstr(charset, 4)
+                if nk not in used_codes:
+                    used_codes.add(nk)
+                    break
+
+ 
             ltd = random.randint(1, 28) # 1 to 28 days
             f.write(f"{i},{nk},{fake.company().replace(',',' ')},{fake.country_code().replace(',',' ')},{ltd},{fake.boolean()}\n")
 ### FACTS TABLES Do them together because they reference each other
@@ -241,6 +216,21 @@ def main():
                 tax_pct = random.choice([0.050, 0.075, 0.100])
                 olf.write(f"{i},{order_dt_month},{order_ts},{line_number},{product_id},{qty},{unit_price},{line_discount_pct},{tax_pct}\n")
 
+#Add duplicate order_id for anomaly
+    
+    orders_data = pd.read_csv(ordersheader_path)
+
+    # Determine how many duplicates to insert (0.5% of total)
+    duplicate_count = int(transaction_count * 0.005)
+
+    # Randomly select indices to duplicate
+    duplicate_indices = random.sample(range(len(orders_data)), duplicate_count)
+
+    # Append duplicates to the CSV
+    with ordersheader_path.open('a', encoding='utf-8') as f:
+        for idx in duplicate_indices:
+            row = orders_data.iloc[idx]
+            f.write(','.join(map(str, row.values)) + '\n')
 
 
 ### Event and IoT Data

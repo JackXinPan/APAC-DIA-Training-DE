@@ -22,3 +22,13 @@ typed as (
 
 -- Step 3: Final output
 select * from typed
+where sensor_ts is not null
+
+and temperature_c between 0 and 50
+    and humidity_pct between 0 and 100
+and battery_mv >= 1000
+and 
+ store_id IN (
+    SELECT store_id
+    FROM main_stg.stg_stores
+) --cleaned out store ids due to lat/long anomalies to keep referential integrity

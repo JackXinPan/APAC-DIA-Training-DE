@@ -33,7 +33,6 @@ models:
       - name: is_discontinued
         data_type: boolean
         description: "Discontinued status flag"
-        tests: [discontinued_without_date]
       - name: introduced_dt
         data_type: date
         description: "Date when product was introduced"

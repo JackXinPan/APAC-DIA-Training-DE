@@ -35,4 +35,5 @@ typed as (
 
 -- Step 3: Final output
 select * from typed
-
+where latitude between -90 and 90
+and longitude between -180 and 180

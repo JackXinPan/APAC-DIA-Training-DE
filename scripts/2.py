@@ -282,83 +282,19 @@ def retail_source(raw_path: str = "data_raw"):
 #Loads into the destination table (customers)
 pipelineduck = dlt.pipeline(pipeline_name="raw", destination=duckdb_dest)
 
-pipelinepq = dlt.pipeline(
-    pipeline_name="retail_bronze",
-    destination=parquet_dest,
-    dataset_name="retail_bronze_dataset"
-)
 
 
-##pipelineduck.drop()  # Clears previous format and schema
+
+#pipelineduck.drop()  # Clears previous format and schema
 infoduck = pipelineduck.run(retail_source())
-pipelinepq.drop()  # Clears previous format and schema
-infopq = pipelinepq.run(retail_source(), loader_file_format="parquet") # have to specify the file format here as parquet for some reason
+
 
 print(infoduck)
-print(infopq)
+
 
 print( "it's ran")
 
 #try to connect
-# Query directly from the Parquet file
-result_products = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/products/*.parquet'"
-).to_df()
-print("\nProducts table:"
-)
-print(result_products.head())
-
-result_customers = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'"
-).to_df()
-print("Customers table:")
-print(result_customers.head())   
-
-result_stores = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/stores/*.parquet'"
-).to_df()
-print("stores table:")
-print(result_stores.head())  
-
-result_suppliers = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet'"
-).to_df()
-print("suppliers table:")
-print(result_suppliers.head())   
-
-result_ordersheader = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/ordersheader/*.parquet'"
-).to_df()
-print("ordersheader table:")
-print(result_ordersheader.head())   
-result_orderslines = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet'"
-).to_df()
-print("orderslines table:")
-print(result_orderslines.head())   
-result_events = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/events/*.parquet'"
-).to_df()
-print("result_events table:")
-print(result_events.head())  
-
-result_sensors = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/sensors/*.parquet'"
-).to_df()
-print("result_sensors table:")
-print(result_sensors.head())  
-
-er = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/exchangerates/*.parquet'"
-).to_df()
-print("er table:")
-print(er.head())  
-
-result_shipments = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/shipments/*.parquet'"
-).to_df()
-print("result_shipments table:")
-print(result_shipments.head())  
 
 
 

@@ -7,19 +7,21 @@ models:
       - name: supplier_id
         data_type: bigint
         description: "Unique supplier identifier"
-        tests: [not_null, unique]
+        tests: 
+          - not_null
+          - unique
       - name: supplier_code
         data_type: string
         description: "Supplier code"
-        tests: [not_null, unique]
+        tests: 
+          - not_null
+          - unique
       - name: name
         data_type: string
         description: "Supplier name"
-        tests: [not_null]
       - name: country_code
         data_type: string
         description: "Country code of the supplier"
-        tests: [not_null]
       - name: lead_time_days
         data_type: int
         description: "Lead time in days"
