@@ -19,14 +19,21 @@ models:
       - name: store_code
         data_type: string
         description: "Store code"
-        tests: [not_null, unique]
+        tests: 
+          - not_null
+          - unique
       - name: name
         data_type: string
         description: "Store name"
-        tests: [not_null]
+        tests: 
+          - not_null
       - name: channel
         data_type: string
         description: "Sales channel"
+        tests: 
+          - not_null
+          - accepted_values:
+              values: ['online', 'retail']
       - name: region
         data_type: string
         description: "Geographic region"
@@ -47,3 +54,6 @@ models:
       - name: close_dt
         data_type: date
         description: "Store closing date"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

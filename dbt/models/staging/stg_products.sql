@@ -21,7 +21,8 @@ select
     cast(currency as string) as currency,
     cast(is_discontinued as boolean) as is_discontinued,
     cast(introduced_dt as date) as introduced_dt,
-    cast(discontinued_dt as date) as discontinued_dt
+    cast(discontinued_dt as date) as discontinued_dt,
+    cast(ingestion_ts as timestamp) as ingestion_ts
 
 from bronze_parquet
 )

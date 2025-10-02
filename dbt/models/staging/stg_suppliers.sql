@@ -18,6 +18,7 @@ select
     cast(country_code as string) as country_code,
     cast(lead_time_days as int) as lead_time_days,
     cast(preffered as boolean) as preferred,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
       row_number() over (
         partition by supplier_code
         order by supplier_id asc  
@@ -32,7 +33,8 @@ select supplier_id,
         name,
         country_code,
         lead_time_days,
-        preferred
+        preferred,
+        ingestion_ts
 
  from typed where row_num = 1
  

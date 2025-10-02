@@ -21,6 +21,7 @@ select
     cast(latitude as double) as latitude,
     cast(longitude as double) as longitude,
     cast(open_dt as date) as open_dt,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
     case when trim(close_dt) = '' THEN NULL ELSE cast(close_dt as date)
         END AS close_dt,
       row_number() over (
@@ -41,8 +42,9 @@ select store_id,
         latitude,
         longitude,
         open_dt,
-        close_dt
+        close_dt,
+        ingestion_ts
  from typed
 where latitude between -90 and 90
 and longitude between -180 and 180 
-and row_num = 1dbt
+and row_num = 1

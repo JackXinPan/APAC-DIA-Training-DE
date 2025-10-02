@@ -39,3 +39,6 @@ models:
       - name: tax_pct
         data_type: decimal(5, 4)
         description: "Tax percentage applied"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

@@ -16,7 +16,8 @@ typed as (
     cast(qty as int) as qty,
     cast(unit_price as decimal(12, 4)) as unit_price,
     cast(line_discount_pct as decimal(5, 4)) as line_discount_pct,
-    cast(tax_pct as decimal(5, 4)) as tax_pct
+    cast(tax_pct as decimal(5, 4)) as tax_pct,
+    cast(ingestion_ts as timestamp) as ingestion_ts
   from bronze_parquet
 )
 

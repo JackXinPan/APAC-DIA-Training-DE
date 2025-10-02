@@ -27,9 +27,10 @@ typed as (
     cast(longitude as double) as longitude,
     cast(birth_date as date) as birth_date,   
 -- Derive age
-    datediff('year', cast(birth_date as date), current_date) as age,
+--    datediff('year', cast(birth_date as date), current_date) as age,
     cast(join_ts as timestamp) as join_ts,
     cast(is_vip as boolean) as is_vip,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
     cast(gdpr_consent as boolean) as gdpr_consent,
       row_number() over (
         partition by natural_key
@@ -55,10 +56,11 @@ select customer_id,
        latitude,
        longitude,
        birth_date,   
-       age,
+--       age,
        join_ts,
        is_vip,
-       gdpr_consent 
+       gdpr_consent,
+       ingestion_ts
  from typed
 where row_num = 1
 and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 

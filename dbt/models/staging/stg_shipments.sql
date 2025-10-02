@@ -16,7 +16,8 @@ typed as (
         cast(carrier as string) as carrier,
         cast(shipped_at as timestamp) as shipped_at,
         cast(delivered_at as timestamp) as delivered_at,
-        cast(ship_cost as numeric(12, 2)) as ship_cost
+        cast(ship_cost as numeric(12, 2)) as ship_cost,
+        cast(ingestion_ts as timestamp) as ingestion_ts
   from bronze_parquet
 )
 

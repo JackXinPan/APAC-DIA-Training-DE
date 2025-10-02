@@ -13,7 +13,8 @@ typed as (
   select
     cast(date as date) as date,
     cast(currency as string) as currency,
-    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud
+    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud,
+    cast(ingestion_ts as timestamp) as ingestion_ts
   from bronze_parquet
 )
 

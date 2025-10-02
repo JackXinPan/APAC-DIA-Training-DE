@@ -28,7 +28,8 @@ typed as (
     cast(payload__action as string) as action,
     cast(payload__discount_coupon as boolean) as discount_coupon,
     cast(payload__session_duration as int) as session_duration,
-    cast(payload__logout_reason as string) as logout_reason
+    cast(payload__logout_reason as string) as logout_reason,
+    cast(ingestion_ts as timestamp) as ingestion_ts
 
   from bronze_parquet
 )

@@ -16,3 +16,6 @@ models:
         data_type: decimal(18, 8)
         description: "Exchange rate to AUD"
         tests: [not_null]
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

@@ -39,3 +39,6 @@ models:
       - name: discontinued_dt
         data_type: date
         description: "Date when product was discontinued"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

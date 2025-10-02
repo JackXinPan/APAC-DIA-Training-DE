@@ -32,3 +32,6 @@ models:
       - name: battery_mv
         data_type: int
         description: "Battery voltage in millivolts"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

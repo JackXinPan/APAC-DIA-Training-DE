@@ -21,8 +21,9 @@ typed as (
     cast(payment_method as varchar) as payment_method,
     cast(coupon_code as varchar) as coupon_code,
     cast(shipping_fee as decimal(12, 2)) as shipping_fee,
-    cast(currency as varchar) as currency
-, --deduplicate based on order_id, keeping the latest order_ts
+    cast(currency as varchar) as currency,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+ --deduplicate based on order_id, keeping the latest order_ts
         row_number() over (
             partition by order_id
             order by order_ts desc  -- or any other logic to keep the "latest" or "first"
@@ -41,7 +42,8 @@ select order_id,
        payment_method,
        coupon_code,
        shipping_fee,
-       currency
+       currency,
+       ingestion_ts
 from typed
 where row_num = 1
 

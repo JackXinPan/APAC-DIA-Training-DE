@@ -1,0 +1,30 @@
+version: 2
+
+sources:
+  - name: main_stg
+    database: main
+    freshness:
+      warn_after: {count: 12, period: hour}
+      error_after: {count: 24, period: hour}
+    tables:
+      - name: customers
+        description: "Raw customer data from the operational database"
+      - name: products
+        description: "Raw product data from the operational database"
+      - name: suppliers
+        description: "Raw supplier data from the operational database"
+      - name: stores
+        description: "Raw store data from the operational database"
+      - name: ordersheader
+        description: "Raw orders header data from the operational database"
+      - name: orderslines
+        description: "Raw orders line items data from the operational database"
+      - name: events
+        description: "Raw user events data from the operational database"
+      - name: exchangerates
+        description: "Raw currency exchange rates data from the operational database"
+      - name: sensors
+        description: "Raw IoT sensor data from the operational database"
+      - name: shipments
+        description: "Raw shipment tracking data from the operational database"
+

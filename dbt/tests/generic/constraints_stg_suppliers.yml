@@ -28,3 +28,6 @@ models:
       - name: preferred
         data_type: boolean
         description: "Preferred supplier flag"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

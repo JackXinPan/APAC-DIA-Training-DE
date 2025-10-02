@@ -8,11 +8,14 @@ models:
       - name: order_id
         data_type: bigint
         description: "Unique order identifier"
-        tests: [not_null, unique]
+        tests: 
+          - not_null,
+          - unique
       - name: order_ts
         data_type: timestamp
         description: "Timestamp of the order"
-        tests: [not_null]
+        tests: 
+          - not_null
       - name: order_dt_local
         data_type: date
         description: "Local date of the order"
@@ -52,3 +55,6 @@ models:
       - name: currency
         data_type: string
         description: "Currency used"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

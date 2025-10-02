@@ -16,7 +16,8 @@ typed as (
     cast(shelf_id as string) as shelf_id,
     cast(temperature_c as decimal(5, 2)) as temperature_c,
     cast(humidity_pct as decimal(5, 2)) as humidity_pct,
-    cast(battery_mv as int) as battery_mv
+    cast(battery_mv as int) as battery_mv,
+    cast(ingestion_ts as timestamp) as ingestion_ts
   from bronze_parquet
 )
 

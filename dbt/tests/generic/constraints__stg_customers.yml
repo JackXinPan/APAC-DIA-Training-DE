@@ -56,10 +56,7 @@ models:
           - longitude
       - name: birth_date
         data_type: date
-        description: "Date of birth"
-      - name: age
-        data_type: bigint
-        description: "Age"        
+        description: "Date of birth"   
       - name: join_ts
         data_type: timestamp
         description: "Timestamp when the customer joined"
@@ -69,4 +66,7 @@ models:
       - name: gdpr_consent
         data_type: boolean
         description: "GDPR consent flag"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"
 

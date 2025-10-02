@@ -39,3 +39,6 @@ models:
         tests:
           - not_null
           - not_negative
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"
