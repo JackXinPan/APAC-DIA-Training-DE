@@ -1,40 +1,26 @@
-{{
+
+{{ 
   config(
     materialized='incremental',
-    unique_key='order_id',
+    unique_key=['order_id', 'line_number'],
     on_schema_change='merge'
   ) 
 }}
 
 SELECT 
-    -- From ordersheader
-    oh.order_id,
-    oh.order_ts,
-    oh.order_dt_local AS order_dt,
-    oh.customer_id,
-    oh.store_id,
-    oh.channel,
-    oh.payment_method,
-    oh.coupon_code,
-    oh.shipping_fee,
-    oh.currency,
-    oh.ingestion_ts AS header_ingestion_ts,
+    order_id,
+    line_number,
+    product_id,
+    qty,
+    unit_price,
+    line_discount_pct,
+    tax_pct,
+    ingestion_ts
 
-    -- From orderslines
-    ol.line_number,
-    ol.product_id,
-    ol.qty,
-    ol.unit_price,
-    ol.line_discount_pct,
-    ol.tax_pct,
-    ol.ingestion_ts AS line_ingestion_ts
-
-FROM {{ ref('stg_ordersheader') }} oh
-JOIN {{ ref('stg_orderslines') }} ol 
-  ON oh.order_id = ol.order_id
+FROM {{ ref('stg_orderslines') }} 
 
 {% if is_incremental() %}
-  WHERE ol.ingestion_ts > (
-    SELECT MAX(line_ingestion_ts) FROM {{ this }}
+  WHERE ingestion_ts > (
+    SELECT MAX(ingestion_ts) FROM {{ this }}
   )
 {% endif %}

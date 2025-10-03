@@ -42,3 +42,6 @@ models:
       - name: ingestion_ts
         data_type: timestamp
         description: "Ingestion timestamp"
+      - name: product_scd_id
+        data_type: string
+        description: "Surrogate key for SCD 2"

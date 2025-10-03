@@ -43,7 +43,7 @@ print(df)
 main_stg_tables = con.execute("""
     SELECT table_name
     FROM information_schema.tables
-    WHERE table_schema = 'main_stg'
+    WHERE table_schema = 'main_gold'
 """).fetchall()
 
 print("Tables in 'main_stg' schema:", main_stg_tables)
@@ -61,8 +61,8 @@ print("Schemas in database:", schemas)
 
 relationship = con.execute("""
     
-SELECT distinct event_type
-FROM main_stg.stg_events s
+SELECT *
+FROM main_gold.dim_date
 
 """).fetchall()
 print("Schemas in database:", relationship)

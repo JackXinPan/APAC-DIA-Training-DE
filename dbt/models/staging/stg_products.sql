@@ -22,7 +22,18 @@ select
     cast(is_discontinued as boolean) as is_discontinued,
     cast(introduced_dt as date) as introduced_dt,
     cast(discontinued_dt as date) as discontinued_dt,
-    cast(ingestion_ts as timestamp) as ingestion_ts
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+    -- Generate a surrogate key for SCD 2    
+    {{ dbt_utils.generate_surrogate_key([
+      'product_id',
+      'name',
+      'category',
+      'subcategory',
+      'current_price',
+      'currency',
+      'is_discontinued',
+      'discontinued_dt'
+    ]) }} AS product_scd_id
 
 from bronze_parquet
 )
