@@ -39,10 +39,9 @@ import pandas as pd
 import pytz
 
 # returns delta
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, LongType, StringType, TimestampType, IntegerType
+from deltalake.writer import write_deltalake
 
-
+import time
 
 print("Delta import successful!")
 
@@ -83,13 +82,15 @@ def main():
     exchangerates_count = 365*3
     shipment_count = 1000000
     returns_count = 100001
+    v1_returns_count = 90000
+    #v2_returns_count = 10000
 
     currencies = ["USD", "EUR", "AUD", "GBP"]
     customer_ids = []
     product_ids = []
     product_price_map = {} # for fact table
     store_ids = []
-    store_channel_map = {}# for fact table
+    store_channel_map = {} # for fact table
 #    store_code_map = {}
     supplier_ids = []
     order_ids = []
@@ -110,6 +111,7 @@ def main():
             birth = date(1960,1,1) + timedelta(days=random.randint(0, 20000))
             join_ts = datetime(2024,1,1) + timedelta(days=random.randint(0, 400), seconds=random.randint(0, 86399))
             f.write(f"{i},{nk},{fake.first_name()},{fake.last_name()},{email},{fake.phone_number().replace(',',' ')},{fake.street_address().replace(',',' ')},{fake.street_name().replace(',',' ')},{fake.city().replace(',',' ')},{fake.state_abbr()},{fake.postcode()},AU,{lat:.6f},{lon:.6f},{birth.isoformat()},{join_ts.isoformat()},{str(random.random()<0.15)},{str(random.random()>0.05)}\n")
+    print("customer created")     
     #products
     products_path = out/'products.csv'
     with products_path.open('w', encoding='utf-8') as f:
@@ -129,8 +131,45 @@ def main():
             if not is_discontinued or (now - discontinued_dt).days > transaction_backdate:
                 product_ids.append(i) # transactions assumed to not include discontinued products transactions date back 200 days
                 product_price_map[i] = current_price # transactions assumed to not include discontinued products transactions date back 200 days
-            f.write(f"{i},{nk},{fake.ecommerce_name()},{fake.ecommerce_category()},{fake.ecommerce_material()},{current_price},{"AUD"},{introduced_dt},{discontinued_dt},{is_discontinued}\n")
+            f.write(f"{i},{nk},{fake.ecommerce_name()},{fake.ecommerce_category()},{fake.ecommerce_material()},{current_price},{random.choice(currencies)},{introduced_dt},{discontinued_dt},{is_discontinued}\n")
+    print("product created")        
+    #Stores
+    existing_nks = [] # for duplicates
+    stores_path = out/'stores.csv'
+    with stores_path.open('w', encoding='utf-8') as f:
+        f.write('store_id,store_code,name,channel,region,state,latitude,longitude,open_dt,close_dt\n')
+        for i in range(1, store_count):                 
+            if random.random() < 0.01 and existing_nks:  # 1% chance to reuse an existing nk
+                nk = random.choice(existing_nks)
+                channel = 'online' if nk.startswith('O-') else 'retail'
+            else:
+                if random.random() < 0.5:
+                    channel = 'online'
+                    nk = 'O-' + rstr.rstr(charset, 8)
+                else:
+                    channel = 'retail'
+                    nk = 'R-' + rstr.rstr(charset, 8)
+                existing_nks.append(nk)
+#            store_code_map[i] = nk            
+            open_dt = date.today() - timedelta(days=random.randint(0, 2000))
+            # Determine discontinued date and indicator
+            if random.random() < 0.2:  # 20% chance of being discontinued
+                days_since_intro = (now - open_dt).days
+                close_dt = open_dt + timedelta(days=random.randint(0, days_since_intro))
+            else:
+                close_dt = None
+            if close_dt is None or (now - close_dt).days > transaction_backdate:
+                store_ids.append(i)
+                store_channel_map[i] = channel
+            # Format close_dt for writing (handle None safely)
+            open_dt = open_dt.isoformat()
+            close_dt = close_dt.isoformat() if close_dt else ''
 
+            #lat long
+            latitude = fake.latitude() if random.random() > 0.01 else float(fake.latitude()) + random.uniform(1000,6000)
+            longitude = fake.longitude() if random.random() > 0.01 else float(fake.longitude()) + random.uniform(1000,6000)
+            f.write(f"{i},{nk},{'Insight ' + fake.city().replace(',',' ')},{channel},{fake.country().replace(',',' ')},{fake.state()},{latitude},{longitude},{open_dt}, {close_dt}\n")
+    print("store created")             
     suppliers_path = out/'suppliers.csv'
     used_codes = set()  # To track used supplier_codes
     with suppliers_path.open('w', encoding='utf-8') as f:
@@ -148,6 +187,8 @@ def main():
  
             ltd = random.randint(1, 28) # 1 to 28 days
             f.write(f"{i},{nk},{fake.company().replace(',',' ')},{fake.country_code().replace(',',' ')},{ltd},{fake.boolean()}\n")
+    print("supplier created")             
+            
 ### FACTS TABLES Do them together because they reference each other
 
     # ordersheader
@@ -195,7 +236,7 @@ def main():
             customer_id = random.choice(customer_ids) if random.random() > 0.01 else random.uniform(customer_count, customer_count*2)
             shipping_fee = round(random.uniform(1, 20), 2)
             # write to orderheaders
-            f.write(f"{i},{order_dt_month},{order_ts},{order_dt_local},{customer_id},{store_id},{channel},{payment_method},{coupon_code},{shipping_fee},{fake.currency_code()}\n")    
+            f.write(f"{i},{order_dt_month},{order_ts},{order_dt_local},{customer_id},{store_id},{channel},{payment_method},{coupon_code},{shipping_fee},{random.choice(currencies)}\n")    
 #Orderslines
             # Generate 1–6 lines per order
             num_lines = random.randint(1, 6)
@@ -206,7 +247,7 @@ def main():
                     unit_price = round(random.uniform(1, 1000), 4)
                 else:
                     product_id = random.choice(product_ids)
-                    unit_price = product_price_map.get(product_id, 0.00)
+                    unit_price = round(product_price_map.get(product_id, random.uniform(1, 1000)), 4)
             # qty (amount of each product) up to 10 
                 qty = random.randint(1, 10)
                 if random.random() < 0.001:
@@ -233,91 +274,102 @@ def main():
             row = orders_data.iloc[idx]
             f.write(','.join(map(str, row.values)) + '\n')
 
-
+    print("orderheader/orderline created")     
 ### Event and IoT Data
     #events JSON
     events_path = out / 'events.jsonl'
+    event_types = ["product_view", "cart_add", "checkout", "watchlist", "login", "logout", "signup"]
+    actions = ["click", "view", "purchase"]
+    devices = ["mobile", "desktop"]
+    logout_reasons = ["timeout", "manual", "error"]
+    event_lines = []
+    for i in range(1, event_count): 
+        event_ts = (nowtime - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat()
+        event_date = datetime.fromisoformat(event_ts).date().isoformat()
+        event_type = random.choice(event_types)
+        user_id = random.choice(customer_ids)
+        session_id = f"session-{random.randint(1000000, 9999999)}"
+
+        envelope = {
+            "event_id": str(i),  # Use loop index as event_id
+            "event_ts": event_ts,
+            "event_type": event_type,
+            "user_id": user_id,
+            "session_id": session_id,
+            "event_date": event_date
+        }
+        # global parameters
+        payload = {
+            "event_ts": event_ts
+        }
+        # Dynamic payload
+        if event_type in ["product_view", "cart_add", "checkout", "watchlist"]:
+            product_id = random.choice(product_ids)
+            payload.update({
+                "product_id": product_id,
+                "price": product_price_map.get(product_id, round(random.uniform(1, 1000), 4)),
+                "action": random.choice(actions)          
+            })
+            if event_type == "checkout":
+                payload.update({
+                    "discount_coupon": True if random.random() < 0.7 else False
+                })
+        elif event_type in ["login", "signup"]:
+            payload.update({
+                "device": random.choice(devices),
+                "ip_address": fake.ipv4(),
+                "geo_location": {
+                    "lat": float(fake.latitude()),
+                    "lon": float(fake.longitude())
+                }
+            })
+        elif event_type == "logout":
+            payload.update({
+                "session_duration": random.randint(30, 3600),  # seconds
+                "logout_reason": random.choice(logout_reasons)
+            })
+        event = {"envelope": envelope, "payload": payload}
+        event_lines.append(json.dumps(event))
+    
     with events_path.open('w', encoding='utf-8') as f:
-        for i in range(1, event_count): 
-            event_ts = (datetime.now(tz) - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat()
-            event_date = datetime.fromisoformat(event_ts).date().isoformat()
-            event_type = random.choice(["product_view", "cart_add", "checkout", "watchlist", "login", "logout", "signup"])
-            user_id = random.choice(customer_ids)
-            session_id = f"session-{random.randint(100000, 999999)}"
+        f.write('\n'.join(event_lines))
 
-            envelope = {
-                "event_id": str(i),  # Use loop index as event_id
-                "event_ts": event_ts,
-                "event_type": event_type,
-                "user_id": user_id,
-                "session_id": session_id,
-                "event_date": event_date
-            }
-            # global parameters
-            payload = {
-                "event_ts": event_ts
-            }
-            # Dynamic payload
-            if event_type in ["product_view", "cart_add", "checkout", "watchlist"]:
-                payload.update({
-                    "product_id": random.choice(product_ids),
-                    "price": product_price_map.get(product_id, round(random.uniform(1, 1000), 4)),
-                    "action": random.choice(["click", "view", "purchase"])          
-                })
-                if event_type == "checkout":
-                    payload.update({
-                        "discount_coupon": True if random.random() < 0.7 else False
-                    })
-            elif event_type in ["login", "signup"]:
-                payload.update({
-                    "device": random.choice(["mobile", "desktop"]),
-                    "ip_address": fake.ipv4(),
-                    "geo_location": {
-                        "lat": float(fake.latitude()),
-                        "lon": float(fake.longitude())
-                    }
-                })
-            elif event_type == "logout":
-                payload.update({
-                    "session_duration": random.randint(30, 3600),  # seconds
-                    "logout_reason": random.choice(["timeout", "manual", "error"])
-                })
-            event = {"envelope": envelope, "payload": payload}
-            f.write(json.dumps(event) + '\n')
-
+    print("events created")     
 # Sensors
     sensors_path = out / 'sensors.csv'
+    sensor_lines = ['sensor_id,sensor_ts,sensor_month,store_id,shelf_id,temperature_c,humidity_pct,battery_mv']
+    retail_store_ids = [store_id for store_id, channel in store_channel_map.items() if channel == "retail"]
+
+    for i in range(1, sensor_count):
+        #includes anomalies 
+        sensor_ts = (nowtime - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat() if random.random() > 0.01 else ''
+        sensor_dt = datetime.fromisoformat(sensor_ts) if sensor_ts else ''
+        sensor_month = sensor_dt.replace(day=1).date().isoformat() if sensor_dt else ''
+
+        store_id = random.choice(retail_store_ids)
+        shelf_id = rstr.rstr(charset, 6)
+
+        # Temperature, inc anomalies
+        if random.random() < 0.01:
+            temperature_c = round(random.uniform(70.0, 100.0), 2) if random.random() < 0.5 else round(random.uniform(-50.0, -10.0), 2)
+        else:
+            temperature_c = round(random.normalvariate(22.0, 3.0), 2)
+
+        # Humidity, inc anomalies
+        if random.random() < 0.015:
+            humidity_pct = round(random.uniform(-100.0, 200.0), 2)
+        else:
+            humidity_pct = round(random.normalvariate(50.0, 10.0), 2)
+        battery_mv = random.randint(1000, 5000)
+        sensor_lines.append(f"{i},{sensor_ts},{sensor_month},{store_id},{shelf_id},{temperature_c},{humidity_pct},{battery_mv}")
+    
+    # Write all lines at once
     with sensors_path.open('w', encoding='utf-8') as f:
-        f.write('sensor_id,sensor_ts,sensor_month,store_id,shelf_id,temperature_c,humidity_pct,battery_mv\n')
+        f.write('\n'.join(sensor_lines))
 
-        retail_store_ids = [store_id for store_id, channel in store_channel_map.items() if channel == "retail"]
-
-        for i in range(1, sensor_count):
-            #includes anomalies 
-            sensor_ts = (datetime.now(tz) - timedelta(days=random.randint(0, 200), seconds=random.randint(0, 86400))).isoformat() if random.random() > 0.01 else ''
-            sensor_dt = datetime.fromisoformat(sensor_ts) if sensor_ts else ''
-            sensor_month = sensor_dt.replace(day=1).date().isoformat() if sensor_dt else ''
-
-            store_id = random.choice(retail_store_ids)
-            shelf_id = rstr.rstr(charset, 6)
-
-            # Temperature, inc anomalies
-            if random.random() < 0.01:
-                temperature_c = round(random.uniform(70.0, 100.0), 2) if random.random() < 0.5 else round(random.uniform(-50.0, -10.0), 2)
-            else:
-                temperature_c = round(random.normalvariate(22.0, 3.0), 2)
-
-            # Humidity, inc anomalies
-            if random.random() < 0.015:
-                humidity_pct = round(random.uniform(-100.0, 200.0), 2)
-            else:
-                humidity_pct = round(random.normalvariate(50.0, 10.0), 2)
-            battery_mv = random.randint(1000, 5000)
-            f.write(f"{i},{sensor_ts},{sensor_month},{store_id},{shelf_id},{temperature_c},{humidity_pct},{battery_mv}\n")
-
+    print("sensors created")     
+    
     # Financial and Operational Data
-
-
     # Parameters
     exchangerates_path = out / 'exchangerates.xlsx'
     
@@ -325,29 +377,20 @@ def main():
 
     # Loop over each day
     for i in range(exchangerates_count):
-        erdate = (now - timedelta(days=i)).isoformat()
         
-        
-        # Skip weekends
+        erdate = now - timedelta(days=i)
+    
         if erdate.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
-            continue
+            continue  # Skip weekends
 
-
-        for currency in currencies:
-            base_rate = {
-                "USD": 1.5,
-                "EUR": 1.6,
-                "GBP": 1.8,
-            }[currency]
-
-
+        
         # Determine variation range
         if erdate.weekday() == 0:  # Monday
             variation = 0.15
         else:
             variation = 0.05
 
- 
+
         for currency in currencies:
             if currency == "AUD":
                 rate_to_aud = 1.0
@@ -360,7 +403,7 @@ def main():
                 rate_to_aud = round(base_rate + random.uniform(-variation, variation), 8)
 
             exchange_rows.append({
-                "date": erdate.isoformat(),
+                "date": erdate,
                 "currency": currency,
                 "rate_to_aud": rate_to_aud
             })
@@ -373,6 +416,7 @@ def main():
     # Save to Excel
     df.to_excel(exchangerates_path, index=False)
     
+    print("exchangerates created")
 ### Shipping
 
     sla_days = 5  # SLA for delivery
@@ -418,122 +462,106 @@ def main():
     # Write to Parquet
     pq.write_table(table, out/'shipments.parquet', compression='snappy')
 
+    print("shipments created")
+### Returns (delta)
 
-    ### Returns (delta)
+    # Paths
+    orderslines_path = out / 'orders_lines.csv'
+    returns_v1_path = out / 'returns_v1'
+    returns_v2_path = out / 'returns_v2'
 
-    ## Comment out for now until refactor us of spark session to delta lake
-#"""     returns_path = out / 'returns.delta'
-#
-##    
-##    spark = SparkSession.builder 
- #       .appName("DeltaLakeApp") 
- ##       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") 
-  #      .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") 
- #       .getOrCreate()"""
+    # Read order_lines.csv
+    df_orders_lines = pd.read_csv(orderslines_path)
 
+    # Filter valid rows with qty ≥ 1
+    valid_order_rows = df_orders_lines[df_orders_lines['qty'].fillna(0) >= 1]
 
-    
-    # use order_lines as a reference
-    # Read into DataFrame    
- #   df_orders_lines = pd.read_csv(orderslines_path)
-
-
-   #Pre-filter rows with qty ≥ 1
-  #  valid_order_rows = df_orders_lines[df_orders_lines['qty'].fillna(0) >= 1]
-
-    # Prebatch sampling for performance
-  #  sampled_rows = valid_order_rows.sample(n=returns_count).reset_index(drop=True)
-    
-  # Generate base data
-  #  base_data = []
-  #  for i, row in enumerate(sampled_rows.itertuples(index=False), start=1):
-        # Sample a valid row
-  #      qtyret = random.randint(1, int(row.qty))
-
-        # Calculate the time range
-  #      order_ts = pd.to_datetime(row.order_ts)
-  #      time_now = datetime.now(tz)
-  #      time_diff = (time_now- order_ts).total_seconds()
-
-        # Generate a random offset within that range
- #       random_offset = random.uniform(0, time_diff)
-
-        # Create return_ts
-#        return_ts = (order_ts + timedelta(seconds=random_offset)).to_pydatetime()  # return_ts cannot be timezone-aware in Spark
-        # reason 
-#        reason = random.choice(["damaged", "wrong item", "changed mind", "late delivery"])
+    # Prebatch sampling for performance (no duplicates)
+    sampled_rows = valid_order_rows.sample(n=returns_count).reset_index(drop=True)
         
-#        base_data.append((
-#            i,  # return_id
-#            row.order_id,  # order_id
-#            row.product_id, # product_id
-#            return_ts, # return_ts
-#            qtyret,  # qty
-#            reason  # reason
-            #,row.order_dt_month # partitioning
-#        ))
-        
-#    schema_v1 = StructType([
-#        StructField("return_id", LongType(), False),
-#        StructField("order_id", LongType(), False),
-#        StructField("product_id", StringType(), False),
-#        StructField("return_ts", TimestampType(), False),
-#        StructField("qty", IntegerType(), False),
-#        StructField("reason", StringType(), False)
-#    ])
-    # Save as Delta table
-#    df_returns_v1 = spark.createDataFrame(base_data, schema=schema_v1)
-#    df_returns_v1.write.format("delta").mode("overwrite").save(str(returns_path))
+    # prebatch for v1 and v2
+    v1_sampled_rows = sampled_rows.head(n=v1_returns_count).reset_index(drop=True)
+    v2_sampled_rows = sampled_rows.tail(len(sampled_rows) - v1_returns_count).reset_index(drop=True)
+
+    # Generate synthetic returns data
+    base_data = []
+    for i, row in enumerate(v1_sampled_rows.itertuples(index=False), start=1):
+        qtyret = random.randint(1, int(row.qty))
+        order_ts = pd.to_datetime(row.order_ts)
+        time_now = datetime.now(tz)
+        time_diff = (time_now - order_ts).total_seconds()
+        random_offset = random.uniform(0, time_diff)
+        return_ts = (order_ts + timedelta(seconds=random_offset)).replace(tzinfo=None)
+        reason = random.choice(["damaged", "wrong item", "changed mind", "late delivery"])
+        base_data.append({
+            "return_id": i,
+            "order_id": row.order_id,
+            "product_id": row.product_id,
+            "return_ts": return_ts,
+            "qty": qtyret,
+            "reason": reason
+        })
+
+    # Convert to DataFrame and then to PyArrow Table
+
+    df_returns = pd.DataFrame(base_data).sort_values(by="return_ts").reset_index(drop=True)
+    table = pa.Table.from_pandas(df_returns)
+
+
+    # Write to Delta Lake folder
+    write_deltalake(str(returns_v1_path), table, mode="overwrite")
 
     
-
-    #v2 evolution
-#    evolved_data = []
-    #map evolved schema
-#    reason_map = {
-#    "damaged": "DMG",
-#    "wrong item": "WRONG_IT",
-#    "changed mind": "CH_MND",
-#    "late delivery": "LT_DELIV"
-#    }
-#    for i in range(returns_count + 1, returns_count + 101):  # 100 new rows to highlight append
-#        row = df_orders_lines.sample(1).iloc[0]
-##        order_id = row['order_id']
-#        order_ts = row['order_ts']
-
-#        qtyret = random.randint(1, max(1, int(row['qty'])))
-#        time_diff = (now - order_ts).total_seconds()
-#        return_ts = order_ts + timedelta(seconds=random.uniform(0, time_diff))
-
-#        reason = random.choice(list(reason_map.keys()))
-#        reason_code = reason_map[reason]
-#
-##        evolved_data.append((
-#            i,
-#            int(order_id),
-#            row['product_id'],
-#            return_ts,
-#            qtyret,
-#            reason,
-#            row['order_dt_month'], # partitioning
-#            reason_code # added evolution with reasoncode
-#        ))
-##    # Updated schema with return_reason_code
-#    schema_v2 = StructType([
-#        StructField("return_id", LongType(), False),
-#        StructField("order_id", LongType(), False),
-#        StructField("product_id", StringType(), False),
-#        StructField("return_ts", TimestampType(), False),
-#        StructField("qty", IntegerType(), False),
-##        StructField("reason", StringType(), False),
-##        StructField("return_reason_code", StringType(), True) # evolved schema
-##    ])
-
-    # Save as Delta table with schema evolution
-##    df_returns_v2 = spark.createDataFrame(base_data, schema=schema_v2)
-##    df_returns_v2.write.format("delta").mode("append").option("mergeSchema", "true").save(str(returns_path))
+## v2
 
 
+    reason_map = {
+        "damaged": "DMG",
+        "wrong item": "WRONG_IT",
+        "changed mind": "CH_MND",
+        "late delivery": "LT_DELIV"
+    }
+
+    evolved_data = []
+
+    for i, row in enumerate(v2_sampled_rows.itertuples(index=False), start=v1_returns_count + 1):
+        order_ts = pd.to_datetime(row.order_ts)
+        time_diff = (time_now - order_ts).total_seconds()
+        return_ts = order_ts + timedelta(seconds=random.uniform(0, time_diff))
+
+        reason = random.choice(list(reason_map.keys()))
+        reason_code = reason_map[reason]
+
+        evolved_data.append({
+            "return_id": i,
+            "order_id": row.order_id,
+            "product_id": row.product_id,
+            "return_ts": return_ts.replace(tzinfo=None),
+            "qty": random.randint(1, max(1, int(row.qty))),
+            "reason": reason,
+            "return_reason_code": reason_code
+        })
+
+    # Convert to PyArrow Table
+
+    df_evolved = pd.DataFrame(evolved_data).sort_values(by="return_ts").reset_index(drop=True)
+    table_evolved = pa.Table.from_pandas(df_evolved)
+
+
+    # Append to Delta Lake with schema evolution
+    write_deltalake(str(returns_v2_path), table_evolved, mode="overwrite")
+
+    print("return v1 and v2 created")     
+    
     print(f"✅ Sample raw written to {out}. Expand to required volumes per /docs.")
 if __name__ == '__main__':
+    
+
+
+    start_time = time.time()
+
     main()
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"Task completed in {duration:.2f} seconds")
