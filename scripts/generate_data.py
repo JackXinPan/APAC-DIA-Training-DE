@@ -84,15 +84,16 @@ def main():
     shipment_count = 1000000
     returns_count = 100001
 
-
+    currencies = ["USD", "EUR", "AUD", "GBP"]
     customer_ids = []
     product_ids = []
+    product_price_map = {} # for fact table
     store_ids = []
     store_channel_map = {}# for fact table
 #    store_code_map = {}
     supplier_ids = []
     order_ids = []
-    product_price_map = {} # for fact table
+
     
     
     # Minimal sample generation (expand to full volumes per docs)
@@ -128,7 +129,7 @@ def main():
             if not is_discontinued or (now - discontinued_dt).days > transaction_backdate:
                 product_ids.append(i) # transactions assumed to not include discontinued products transactions date back 200 days
                 product_price_map[i] = current_price # transactions assumed to not include discontinued products transactions date back 200 days
-            f.write(f"{i},{nk},{fake.ecommerce_name()},{fake.ecommerce_category()},{fake.ecommerce_material()},{current_price},{fake.currency_code()},{introduced_dt},{discontinued_dt},{is_discontinued}\n")
+            f.write(f"{i},{nk},{fake.ecommerce_name()},{fake.ecommerce_category()},{fake.ecommerce_material()},{current_price},{"AUD"},{introduced_dt},{discontinued_dt},{is_discontinued}\n")
 
     suppliers_path = out/'suppliers.csv'
     used_codes = set()  # To track used supplier_codes
@@ -205,7 +206,7 @@ def main():
                     unit_price = round(random.uniform(1, 1000), 4)
                 else:
                     product_id = random.choice(product_ids)
-                    unit_price = product_price_map.get(product_id, round(random.uniform(1, 1000), 4))
+                    unit_price = product_price_map.get(product_id, 0.00)
             # qty (amount of each product) up to 10 
                 qty = random.randint(1, 10)
                 if random.random() < 0.001:
@@ -213,7 +214,7 @@ def main():
                         qty *= -1  # Rare negative quantity times by negative 1
                     else:
                         qty *= 0   # Rare zero quantity times by 0
-                tax_pct = random.choice([0.050, 0.075, 0.100])
+                tax_pct = random.choice([0.050, 0.010, 0.150])
                 olf.write(f"{i},{order_dt_month},{order_ts},{line_number},{product_id},{qty},{unit_price},{line_discount_pct},{tax_pct}\n")
 
 #Add duplicate order_id for anomaly
@@ -319,31 +320,52 @@ def main():
 
     # Parameters
     exchangerates_path = out / 'exchangerates.xlsx'
-    currencies = ["USD", "EUR", "JPY", "GBP", "NZD", "CNY"]
+    
     exchange_rows = []
 
     # Loop over each day
     for i in range(exchangerates_count):
         erdate = (now - timedelta(days=i)).isoformat()
+        
+        
+        # Skip weekends
+        if erdate.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+            continue
+
 
         for currency in currencies:
             base_rate = {
                 "USD": 1.5,
                 "EUR": 1.6,
-                "JPY": 0.012,
                 "GBP": 1.8,
-                "NZD": 0.9,
-                "CNY": 0.22
             }[currency]
 
-            # Add slight daily variation
-            rate_to_aud = round(base_rate + random.uniform(-0.05, 0.05), 8)  #(DECIMAL 18,8)
+
+        # Determine variation range
+        if erdate.weekday() == 0:  # Monday
+            variation = 0.15
+        else:
+            variation = 0.05
+
+ 
+        for currency in currencies:
+            if currency == "AUD":
+                rate_to_aud = 1.0
+            else:
+                base_rate = {
+                    "USD": 1.5,
+                    "EUR": 1.6,
+                    "GBP": 1.8,
+                }[currency]
+                rate_to_aud = round(base_rate + random.uniform(-variation, variation), 8)
 
             exchange_rows.append({
-                "date": erdate,
+                "date": erdate.isoformat(),
                 "currency": currency,
                 "rate_to_aud": rate_to_aud
             })
+
+
 
     # Convert to DataFrame
     df = pd.DataFrame(exchange_rows)
