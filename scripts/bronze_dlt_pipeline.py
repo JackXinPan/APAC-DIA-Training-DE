@@ -12,6 +12,8 @@ from my_schemas.my_schemas import *
 
 from datetime import datetime, timedelta, date
 import json
+
+from deltalake import DeltaTable
 # Define the UTC+8 timezone
 utc_plus_8 = pytz.timezone('Australia/Perth')  
 
@@ -219,6 +221,31 @@ def retail_source(raw_path: str = "data_raw"):
         for record in shipmentsdf.to_dict(orient="records"):
             if updated_after.last_value is None or record["shipment_id"] > updated_after.last_value: #it's monotomically increasing
              yield record
+             
+    @dlt.resource(#returns_v1
+        write_disposition="append",
+        columns=pyarrow_schema_to_dlt_columns(returns_day1_schema)
+    )
+    def load_returns_v1():
+        print("Loading resource: Returns")
+        file_path = os.path.join(raw_path, "returns_v1")
+        
+        # Load Delta table and convert to Pandas DataFrame
+        dt = DeltaTable(file_path)
+        returnsdf = dt.to_pandas()
+
+        for record in returnsdf.to_dict(orient="records"):
+             yield record
+    
+    @dlt.resource(#returns_v2
+        write_disposition="append",
+        schema_contract_settings={"columns": "evolve"}
+    )
+    def load_returns_v2():
+        dt = DeltaTable(os.path.join(raw_path, "returns_v2"))
+        df = dt.to_pandas()
+        for record in df.to_dict(orient="records"):
+            yield record
 
     
 # Define transformers with appropriate write dispositions
@@ -261,8 +288,12 @@ def retail_source(raw_path: str = "data_raw"):
     @dlt.transformer(data_from=load_shipments, write_disposition="append")
     def shipments(record):
         return enrich_record(record)
-        
     
+
+    @dlt.transformer(data_from=[load_returns_v1, load_returns_v2], write_disposition="append")
+    def returns(record):
+        return enrich_record(record)
+
     return [
         customers,
         products,
@@ -273,7 +304,8 @@ def retail_source(raw_path: str = "data_raw"):
         events,
         sensors,
         exchangerates,
-        shipments
+        shipments,
+        returns
 
     ]
 #When you run pipeline.run(retail_source()), DLT orchestrates the whole flow:

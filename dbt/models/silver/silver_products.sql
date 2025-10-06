@@ -34,6 +34,7 @@ WITH source AS (
   {% endif %}
 ),
 
+
 new_records AS (
   SELECT *
   FROM source
