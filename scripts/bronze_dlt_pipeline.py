@@ -223,8 +223,8 @@ def retail_source(raw_path: str = "data_raw"):
              yield record
              
     @dlt.resource(#returns_v1
-        write_disposition="append",
-        columns=pyarrow_schema_to_dlt_columns(returns_day1_schema)
+        write_disposition="append"
+    ##    ,columns=pyarrow_schema_to_dlt_columns(returns_day1_schema)
     )
     def load_returns_v1():
         print("Loading resource: Returns")
@@ -238,8 +238,8 @@ def retail_source(raw_path: str = "data_raw"):
              yield record
     
     @dlt.resource(#returns_v2
-        write_disposition="append",
-        schema_contract_settings={"columns": "evolve"}
+        write_disposition="append"
+      ##  ,schema_contract_settings={"columns": "evolve"}
     )
     def load_returns_v2():
         dt = DeltaTable(os.path.join(raw_path, "returns_v2"))
@@ -290,22 +290,21 @@ def retail_source(raw_path: str = "data_raw"):
         return enrich_record(record)
     
 
-    @dlt.transformer(data_from=[load_returns_v1, load_returns_v2], write_disposition="append")
-    def returns(record):
+    
+    @dlt.transformer(data_from=load_returns_v1, write_disposition="append")
+    def returnsv(record):
+        record["source_version"] = "v1"
         return enrich_record(record)
 
+    @dlt.transformer(data_from=load_returns_v2, write_disposition="append")
+    def returnsv(record):
+        record["source_version"] = "v2"
+        return enrich_record(record)
+
+
     return [
-        customers,
-        products,
-        stores,
-        suppliers,
-        ordersheader,
-        orderslines,
-        events,
-        sensors,
-        exchangerates,
-        shipments,
-        returns
+
+        returnsv
 
     ]
 #When you run pipeline.run(retail_source()), DLT orchestrates the whole flow:
@@ -321,7 +320,7 @@ pipelinepq = dlt.pipeline(
 )
 
 
-##pipelineduck.drop()  # Clears previous format and schema
+pipelineduck.drop()  # Clears previous format and schema
 infoduck = pipelineduck.run(retail_source())
 pipelinepq.drop()  # Clears previous format and schema
 infopq = pipelinepq.run(retail_source(), loader_file_format="parquet") # have to specify the file format here as parquet for some reason
@@ -330,74 +329,3 @@ print(infoduck)
 print(infopq)
 
 print( "it's ran")
-
-#try to connect
-# Query directly from the Parquet file
-result_products = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/products/*.parquet'"
-).to_df()
-print("\nProducts table:"
-)
-print(result_products.head())
-
-result_customers = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet'"
-).to_df()
-print("Customers table:")
-print(result_customers.head())   
-
-result_stores = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/stores/*.parquet'"
-).to_df()
-print("stores table:")
-print(result_stores.head())  
-
-result_suppliers = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet'"
-).to_df()
-print("suppliers table:")
-print(result_suppliers.head())   
-
-result_ordersheader = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/ordersheader/*.parquet'"
-).to_df()
-print("ordersheader table:")
-print(result_ordersheader.head())   
-result_orderslines = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet'"
-).to_df()
-print("orderslines table:")
-print(result_orderslines.head())   
-result_events = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/events/*.parquet'"
-).to_df()
-print("result_events table:")
-print(result_events.head())  
-
-result_sensors = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/sensors/*.parquet'"
-).to_df()
-print("result_sensors table:")
-print(result_sensors.head())  
-
-er = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/exchangerates/*.parquet'"
-).to_df()
-print("er table:")
-print(er.head())  
-
-result_shipments = duckdb.query(
-    "SELECT * FROM 'lake/bronze/parquet/retail_bronze_dataset/shipments/*.parquet'"
-).to_df()
-print("result_shipments table:")
-print(result_shipments.head())  
-
-
-
-# .\scripts\setup_spark_env.ps1
-
-## setup_spark_env.ps1
-# $env:SPARK_HOME = "C:\spark"
-#  $env:JAVA_HOME = "C:\Program Files\Java\jdk-17" 
-# $env:PATH += ";$env:SPARK_HOME\bin;$env:JAVA_HOME\bin"
-# python scripts\generate_data.py

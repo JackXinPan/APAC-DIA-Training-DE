@@ -16,8 +16,7 @@ WITH silver AS (
         c.region,
         lead_time_days,
         preferred
-         FROM {{ ref('stg_suppliers') }} s
-JOIN {{ ref('stg_countries') }} c on s.country_code = c.code
+         FROM {{ ref('stg_suppliers') }} 
 ),
 enhanced AS (
     SELECT
