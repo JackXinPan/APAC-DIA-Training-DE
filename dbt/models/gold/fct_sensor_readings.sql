@@ -1,7 +1,7 @@
 {{
   config(
     materialized='incremental',
-    unique_key=['sensor_ts', 'store_id', 'shelf_id'],
+    unique_key=['hour_ts', 'store_id', 'shelf_id'],
     on_schema_change='merge'
   ) 
 }}
@@ -13,15 +13,8 @@ WITH base AS (
         shelf_id,
         temperature_c,
         humidity_pct,
-        battery_mv,
-        ingestion_ts
+        battery_mv
     FROM {{ ref('silver_sensors') }}
-
-    {% if is_incremental() %}
-      WHERE ingestion_ts > (
-        SELECT MAX(ingestion_ts) FROM {{ this }}
-      )
-    {% endif %}
 ),
 
 hourly_aggregates AS (
@@ -77,6 +70,11 @@ final AS (
             ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
         ) AS rolling_avg_battery_mv_3h
     FROM hourly_aggregates
+    {% if is_incremental() %}
+      WHERE hour_ts > (
+        SELECT MAX(hour_ts) FROM {{ this }}
+      )
+    {% endif %}
 )
 
 SELECT * FROM final

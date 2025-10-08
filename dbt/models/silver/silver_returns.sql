@@ -12,7 +12,7 @@ SELECT
         product_id 
         ,return_ts
         ,  qty
-reason ,
+,reason ,
 return_reason_code,
  source_version,
   ingestion_ts 

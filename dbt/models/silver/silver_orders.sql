@@ -18,7 +18,6 @@ SELECT
     shipping_fee,
     currency,
     ingestion_ts
-and 
 FROM {{ ref('stg_ordersheader') }} 
 {% if is_incremental() %}
   WHERE ingestion_ts > (

@@ -1,4 +1,4 @@
-{% set src_table = 'returnsv' %}
+{% set src_table = 'returnsall' %}
 
 {% set lake_root = var('lake_root') %}
 

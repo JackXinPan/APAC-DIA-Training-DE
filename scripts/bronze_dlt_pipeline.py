@@ -292,19 +292,19 @@ def retail_source(raw_path: str = "data_raw"):
 
     
     @dlt.transformer(data_from=load_returns_v1, write_disposition="append")
-    def returnsv(record):
+    def returnsall(record):
         record["source_version"] = "v1"
         return enrich_record(record)
 
     @dlt.transformer(data_from=load_returns_v2, write_disposition="append")
-    def returnsv(record):
+    def returnsall(record):
         record["source_version"] = "v2"
         return enrich_record(record)
 
 
     return [
 
-        returnsv
+        returnsall
 
     ]
 #When you run pipeline.run(retail_source()), DLT orchestrates the whole flow:

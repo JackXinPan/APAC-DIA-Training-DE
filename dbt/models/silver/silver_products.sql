@@ -7,8 +7,6 @@
 }}
 
 
-
-
 WITH source AS (
   SELECT 
     product_id,
@@ -28,12 +26,13 @@ WITH source AS (
     TRUE AS is_current
   FROM {{ ref('stg_products') }}
   {% if is_incremental() %}
-    WHERE ingestion_ts > (
-      SELECT MAX(ingestion_ts) FROM {{ this }}
+    WHERE ingestion_ts > COALESCE(
+      (SELECT MAX(ingestion_ts) FROM {{ this }}),
+      '1900-01-01'::DATE
     )
   {% endif %}
-),
-
+)
+,
 
 new_records AS (
   SELECT *
@@ -70,9 +69,12 @@ expired_records AS (
     )
 )
 ---SCD retain expired records updating current and effective to status as and UNION new records with same surrogate key
+
 SELECT * FROM new_records
 UNION ALL
 SELECT * FROM expired_records
+
+
 
 
 
