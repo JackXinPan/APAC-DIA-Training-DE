@@ -22,6 +22,7 @@ hourly_aggregates AS (
         store_id,
         shelf_id,
         --pre aggregations
+        DATE_TRUNC('day', sensor_ts) AS sensor_date,
         DATE_TRUNC('hour', sensor_ts) AS hour_ts,
         AVG(temperature_c) AS avg_temperature_c,
         AVG(humidity_pct) AS avg_humidity_pct,
@@ -43,7 +44,7 @@ hourly_aggregates AS (
             ELSE FALSE 
         END AS is_anom_bat_mv
     FROM base
-    GROUP BY store_id, shelf_id, DATE_TRUNC('hour', sensor_ts)
+    GROUP BY store_id, shelf_id, DATE_TRUNC('day', sensor_ts), DATE_TRUNC('hour', sensor_ts), 
 ),
 
 final AS (

@@ -7,5 +7,21 @@
     check_cols=['name','category','subcategory','current_price','currency','is_discontinued']
   )
 }}
-select * from bronze_products -- TODO: create bronze_products view
+
+
+SELECT 
+  product_id,
+  sku,
+  name,
+  category,
+  subcategory,
+  current_price,
+  currency,
+  is_discontinued,
+  introduced_dt,
+  discontinued_dt,
+  ingestion_ts,
+  product_scd_id
+FROM {{ ref('stg_products') }}
+
 {% endsnapshot %}

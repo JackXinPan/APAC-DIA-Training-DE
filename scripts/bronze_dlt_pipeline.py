@@ -99,7 +99,8 @@ def retail_source(raw_path: str = "data_raw"):
         storesdf = pd.read_csv(file_path)
         for record in storesdf.to_dict(orient="records"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
-    @dlt.resource(
+            
+    @dlt.resource(#suppliers
             write_disposition="replace", # overwrite
             columns=pyarrow_schema_to_dlt_columns(suppliers_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
     )
@@ -112,18 +113,17 @@ def retail_source(raw_path: str = "data_raw"):
             yield record #Each record is streamed one at a time, allowing DLT to process efficiently and apply schema validation.
 
     @dlt.resource( #ordersheader
-            write_disposition="append",
+            write_disposition="replace",
             columns=pyarrow_schema_to_dlt_columns(orders_header_schema),  # Use PyArrow schema that is converted to dict # schema grabbed the schema.py file
-            primary_key="order_id",
-            merge_key="order_id" # is there a reason why there is a merge key? If it's just appending then append on the ts watermark
+ 
         )
 
-    def load_ordersheader(updated_after=dlt.sources.incremental("order_ts")):
+    def load_ordersheader():
         print("Loading resource: ordersheader")
         file_path = os.path.join(raw_path, "orders_header.csv")
         ordersheaderdf = pd.read_csv(file_path)
         for record in ordersheaderdf.to_dict(orient="records"):
-            if updated_after.last_value is None or record["order_ts"] > updated_after.last_value:
+
                     yield record  
             
 
@@ -304,7 +304,7 @@ def retail_source(raw_path: str = "data_raw"):
 
     return [
 
-        returnsall
+        ordersheader
 
     ]
 #When you run pipeline.run(retail_source()), DLT orchestrates the whole flow:

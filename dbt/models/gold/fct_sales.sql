@@ -1,17 +1,16 @@
-{{
-  config(
-    materialized='incremental',
-    unique_key='sale_id',
-    on_schema_change='merge'
-  ) 
-}}
 
+{{ config(
+    materialized='incremental',
+    unique_key='sales_id',
+    on_schema_change='merge'
+) }}
 
 WITH sales_enriched AS (
   SELECT 
     ol.order_id || '-' || ol.line_number AS sale_id,
-    oh.order_ts,
+    ol.order_id,
     ol.line_number,
+    oh.order_ts,
     oh.order_date,
     oh.customer_id,
     ol.product_id,
@@ -52,8 +51,8 @@ WITH sales_enriched AS (
     ROUND(oh.shipping_fee, 2) AS shipping_fee_aud,
     oh.currency AS order_currency,
     oh.ingestion_ts AS ingestion_ts
-  FROM {{ ref('silver_orders') }} oh
-  JOIN {{ ref('silver_orderslines') }} ol 
+  FROM {{ ref('silver_orderslines') }} ol
+  JOIN {{ ref('silver_orders') }} oh 
        ON oh.order_id = ol.order_id
   JOIN {{ ref('silver_products') }} p 
        ON ol.product_id = p.product_id 
@@ -70,6 +69,8 @@ WHERE ingestion_ts > (
 
 SELECT 
   sale_id,
+  order_id,
+  line_number,
   order_ts,
   line_number,
   order_date,
