@@ -1,0 +1,60 @@
+
+version: 2
+
+models:
+  - name: stg_ordersheader
+    description: "Staging model for orders header data"
+    columns:
+      - name: order_id
+        data_type: bigint
+        description: "Unique order identifier"
+        tests: 
+          - not_null,
+          - unique
+      - name: order_ts
+        data_type: timestamp
+        description: "Timestamp of the order"
+        tests: 
+          - not_null
+      - name: order_dt_local
+        data_type: date
+        description: "Local date of the order"
+      - name: customer_id
+        data_type: bigint
+        description: "Customer placing the order"
+        tests:
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id  
+          - foreign_key_violation_rate: ## this is will fail because of anomalous customer_ids
+              parent_model: ref('stg_customers')
+              parent_key: customer_id
+
+      - name: store_id
+        data_type: bigint
+        description: "Store where the order was placed"
+        tests:
+          - relationships:
+              to: ref('stg_stores')
+              field: store_id
+          - foreign_key_violation_rate: ## this is will fail because of anomalous store_ids
+              parent_model: ref('stg_stores')
+              parent_key: store_id
+      - name: channel
+        data_type: string
+        description: "Sales channel"
+      - name: payment_method
+        data_type: string
+        description: "Payment method used"
+      - name: coupon_code
+        data_type: string
+        description: "Applied coupon code"
+      - name: shipping_fee
+        data_type: decimal(12, 2)
+        description: "Shipping fee amount"
+      - name: currency
+        data_type: string
+        description: "Currency used"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

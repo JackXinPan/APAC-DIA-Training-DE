@@ -1,0 +1,37 @@
+
+version: 2
+
+models:
+  - name: stg_returns
+    description: "Staging model for returns"
+    columns:
+      - name: return_id
+        data_type: bigint
+        description: "Unique return identifier"
+        tests: 
+          - not_null
+          - unique
+      - name: order_id
+        data_type: bigint
+        description: "Associated order identifier"
+      - name: customer_id
+        data_type: bigint
+        description: "Customer identifier"
+      - name: return_reason
+        data_type: string
+        description: "Reason for return"
+      - name: return_date
+        data_type: date
+        description: "Date of return"
+      - name: refund_amount
+        data_type: decimal
+        description: "Amount refunded to customer"
+      - name: status
+        data_type: string
+        description: "Return status"
+      - name: source_version
+        data_type: string
+        description: "Version of the source data"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

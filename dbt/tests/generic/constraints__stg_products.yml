@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: stg_products
+    description: "Staging model for products"
+    columns:
+      - name: product_id
+        data_type: bigint
+        description: "Unique product identifier"
+        tests: [not_null, unique]
+      - name: sku
+        data_type: string
+        description: "Stock keeping unit"
+        tests: [not_null]
+      - name: name
+        data_type: string
+        description: "Product name"
+        tests: [not_null]
+      - name: category
+        data_type: string
+        description: "Product category"
+      - name: subcategory
+        data_type: string
+        description: "Product subcategory"
+      - name: current_price
+        data_type: numeric(12,4)
+        description: "Current price of the product"
+        tests: [not_null, not_negative]
+      - name: currency
+        data_type: string
+        description: "Currency of the price"
+        tests: [not_null]
+      - name: is_discontinued
+        data_type: boolean
+        description: "Discontinued status flag"
+      - name: introduced_dt
+        data_type: date
+        description: "Date when product was introduced"
+      - name: discontinued_dt
+        data_type: date
+        description: "Date when product was discontinued"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"
+      - name: product_scd_id
+        data_type: string
+        description: "Surrogate key for SCD 2"

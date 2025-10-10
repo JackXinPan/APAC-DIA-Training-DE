@@ -1,0 +1,37 @@
+
+version: 2
+
+models:
+  - name: stg_sensors
+    description: "Staging model for sensor readings from store shelves"
+    columns:
+      - name: sensor_ts
+        data_type: timestamp
+        description: "Timestamp of the sensor reading"
+        tests: [not_null]
+      - name: store_id
+        data_type: bigint
+        description: "Store identifier"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_stores')
+              field: store_id
+          - foreign_key_violation_rate:
+              parent_model: ref('stg_stores')
+              parent_key: store_id
+      - name: shelf_id
+        data_type: string
+        description: "Shelf identifier"
+      - name: temperature_c
+        data_type: decimal(5, 2)
+        description: "Temperature in Celsius"
+      - name: humidity_pct
+        data_type: decimal(5, 2)
+        description: "Humidity percentage"
+      - name: battery_mv
+        data_type: int
+        description: "Battery voltage in millivolts"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

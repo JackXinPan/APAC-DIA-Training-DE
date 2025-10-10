@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: stg_stores
+    description: "Staging model for stores"
+    columns:
+      - name: store_id
+        data_type: bigint
+        description: "Unique store identifier"
+        tests: 
+          - not_null
+          - unique
+          - relationships:
+              to: ref('stg_stores')
+              field: store_id
+          - foreign_key_violation_rate:
+              parent_model: ref('stg_stores')
+              parent_key: store_id
+      - name: store_code
+        data_type: string
+        description: "Store code"
+        tests: 
+          - not_null
+          - unique
+      - name: name
+        data_type: string
+        description: "Store name"
+        tests: 
+          - not_null
+      - name: channel
+        data_type: string
+        description: "Sales channel"
+        tests: 
+          - not_null
+          - accepted_values:
+              values: ['online', 'retail']
+      - name: region
+        data_type: string
+        description: "Geographic region"
+      - name: state
+        data_type: string
+        description: "State or province"
+      - name: latitude
+        data_type: double
+        description: "Latitude coordinate"
+        tests: [latitude]
+      - name: longitude
+        data_type: double
+        description: "Longitude coordinate"
+        tests: [longitude]
+      - name: open_dt
+        data_type: date
+        description: "Store opening date"
+      - name: close_dt
+        data_type: date
+        description: "Store closing date"
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"

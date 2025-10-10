@@ -1,0 +1,1408 @@
+status,timing,thread_id,execution_time,message,failures,unique_id,compiled,compiled_code,relation_name,batch_results,adapter_response._message,ingestion_ts
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.221235Z', 'completed_at': '2025-10-10T07:10:43.239215Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.268693Z', 'completed_at': '2025-10-10T07:10:43.412651Z'}]",Thread-1 (worker),0.2005784511566162,OK,,model.local_de_assessment._sources,True,"-- External views pointing at Bronze Parquet/Delta. Adjust path if needed.
+
+
+
+
+-- Step 1: Read from external Parquet file
+
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet')
+
+--create or replace view bronze_customers_delta as
+--select * from delta_scan('../lake/bronze/parquet/retail_bronze_dataset/delta/customers');
+
+
+
+--
+
+--
+
+--select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet')","""warehouse"".""main_stg"".""_sources""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.231100Z', 'completed_at': '2025-10-10T07:10:43.239914Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.284050Z', 'completed_at': '2025-10-10T07:10:43.461215Z'}]",Thread-3 (worker),0.24553990364074707,OK,,model.local_de_assessment.stg_audit,True,"
+
+with bronze_parquet as (
+  select * from read_parquet('seeds/run_results_table.parquet')
+),
+
+typed as (
+  select
+   *
+  from bronze_parquet
+)
+
+select
+  *
+from typed","""warehouse"".""main_stg"".""stg_audit""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.227338Z', 'completed_at': '2025-10-10T07:10:43.238491Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.240571Z', 'completed_at': '2025-10-10T07:10:43.465946Z'}]",Thread-2 (worker),0.24776721000671387,OK,,model.local_de_assessment.dim_date,True,"
+
+
+
+
+
+
+WITH date_spine AS (
+    SELECT generate_series AS date_day
+    FROM generate_series(
+        DATE '2021-01-01',
+        DATE '2025-12-31',
+        INTERVAL '1 day'
+    )
+),
+
+
+dim_date AS (
+    SELECT
+        d.date_day AS date,
+        EXTRACT(YEAR FROM d.date_day) AS year,
+        EXTRACT(MONTH FROM d.date_day) AS month,
+        EXTRACT(DAY FROM d.date_day) AS day,
+        EXTRACT(DAYOFWEEK FROM d.date_day) AS day_of_week,
+
+CASE EXTRACT(DOW FROM d.date_day)
+    WHEN 0 THEN 'Sunday'
+    WHEN 1 THEN 'Monday'
+    WHEN 2 THEN 'Tuesday'
+    WHEN 3 THEN 'Wednesday'
+    WHEN 4 THEN 'Thursday'
+    WHEN 5 THEN 'Friday'
+    WHEN 6 THEN 'Saturday'
+END AS day_name,
+
+CASE EXTRACT(MONTH FROM d.date_day)
+    WHEN 1 THEN 'January'
+    WHEN 2 THEN 'February'
+    WHEN 3 THEN 'March'
+    WHEN 4 THEN 'April'
+    WHEN 5 THEN 'May'
+    WHEN 6 THEN 'June'
+    WHEN 7 THEN 'July'
+    WHEN 8 THEN 'August'
+    WHEN 9 THEN 'September'
+    WHEN 10 THEN 'October'
+    WHEN 11 THEN 'November'
+    WHEN 12 THEN 'December'
+    END AS month_name
+,
+
+
+        EXTRACT(QUARTER FROM d.date_day) AS quarter,
+-- Weekend logic (PostgreSQL: 0 = Sunday, 6 = Saturday)
+CASE WHEN EXTRACT(DOW FROM d.date_day) IN (0, 6) THEN TRUE ELSE FALSE END AS is_weekend,
+
+-- Month start
+DATE_TRUNC('month', d.date_day) AS month_start_date,
+
+-- Month end
+
+(DATE_TRUNC('month', d.date_day) + INTERVAL '1 month' - INTERVAL '1 day')::date AS month_end_date,
+
+
+-- Quarter start
+DATE_TRUNC('quarter', d.date_day) AS quarter_start_date,
+-- Quarter end
+(DATE_TRUNC('quarter', d.date_day) + INTERVAL '3 month' - INTERVAL '1 day')::date AS quarter_end_date,
+
+-- Year start
+DATE_TRUNC('year', d.date_day) AS year_start_date,
+-- Year end
+(DATE_TRUNC('year', d.date_day) + INTERVAL '1 year' - INTERVAL '1 day')::date AS year_end_date,
+        EXTRACT(WEEK  FROM d.date_day) AS week_number,
+        
+-- Australian fiscal year (starts in July)
+CASE 
+    WHEN EXTRACT(MONTH FROM d.date_day) >= 7 
+    THEN EXTRACT(YEAR FROM d.date_day) + 1 
+    ELSE EXTRACT(YEAR FROM d.date_day) 
+END AS fiscal_year_au,
+
+-- Australian fiscal quarter (Q1 = Jul–Sep)
+CASE 
+    WHEN EXTRACT(MONTH FROM d.date_day) >= 7 
+    THEN FLOOR(((EXTRACT(MONTH FROM d.date_day) - 7) / 3) + 1)
+    ELSE FLOOR(((EXTRACT(MONTH FROM d.date_day) + 5) / 3) + 1)
+END AS fiscal_quarter_au,
+
+
+        -- Holiday logic with weekend adjustment
+
+    CASE 
+        WHEN d.date_day IN (
+            DATE '2021-04-02', DATE '2021-04-05',
+            DATE '2022-04-15', DATE '2022-04-18',
+            DATE '2023-04-07', DATE '2023-04-10',
+            DATE '2024-03-29', DATE '2024-04-01',
+            DATE '2025-04-18', DATE '2025-04-21'
+        )
+
+    OR (
+        (EXTRACT(MONTH FROM d.date_day), EXTRACT(DAY FROM d.date_day)) IN (
+            (1, 1), (1, 26), (4, 25), (12, 25), (12, 26)
+        )
+        AND EXTRACT(DOW FROM d.date_day) NOT IN (0, 6)  -- Not weekend
+    )
+    OR (
+        (EXTRACT(MONTH FROM d.date_day - INTERVAL '1 day'), EXTRACT(DAY FROM d.date_day - INTERVAL '1 day')) IN (
+            (1, 1), (1, 26), (4, 25), (12, 25), (12, 26)
+        )
+        AND EXTRACT(DOW FROM d.date_day) = 1  -- Monday
+        AND EXTRACT(DOW FROM d.date_day - INTERVAL '1 day') IN (0, 6)  -- Sunday or Saturday
+    )
+    THEN TRUE
+    ELSE FALSE
+END AS is_holiday_au,
+
+CASE
+    WHEN d.date_day IN (
+        DATE '2021-04-02', DATE '2021-04-05',
+        DATE '2022-04-15', DATE '2022-04-18',
+        DATE '2023-04-07', DATE '2023-04-10',
+        DATE '2024-03-29', DATE '2024-04-01',
+        DATE '2025-04-18', DATE '2025-04-21'
+    )
+    OR (
+        (EXTRACT(MONTH FROM d.date_day), EXTRACT(DAY FROM d.date_day)) IN (
+            (1, 1),   -- New Year's Day
+            (7, 4),   -- Independence Day
+            (11, 11), -- Veterans Day
+            (12, 25)  -- Christmas Day
+        )
+        AND EXTRACT(DOW FROM d.date_day) NOT IN (0, 6)  -- Not weekend
+    )
+    OR (
+        (EXTRACT(MONTH FROM d.date_day - INTERVAL '1 day'), EXTRACT(DAY FROM d.date_day - INTERVAL '1 day')) IN (
+            (1, 1), (7, 4), (11, 11), (12, 25)
+        )
+        AND EXTRACT(DOW FROM d.date_day) = 1  -- Monday
+        AND EXTRACT(DOW FROM d.date_day - INTERVAL '1 day') IN (0, 6)  -- Sunday or Saturday
+    )
+    THEN TRUE
+    ELSE FALSE
+END AS is_holiday_us,
+
+CASE 
+    WHEN d.date_day IN (
+        DATE '2021-04-02', DATE '2021-04-05',
+        DATE '2022-04-15', DATE '2022-04-18',
+        DATE '2023-04-07', DATE '2023-04-10',
+        DATE '2024-03-29', DATE '2024-04-01',
+        DATE '2025-04-18', DATE '2025-04-21'
+    )
+    OR (
+        (EXTRACT(MONTH FROM d.date_day), EXTRACT(DAY FROM d.date_day)) IN (
+            (1, 1),   -- New Year's Day
+            (12, 25), -- Christmas Day
+            (12, 26)  -- Boxing Day
+        )
+        AND EXTRACT(DOW FROM d.date_day) NOT IN (0, 6)  -- Not weekend
+    )
+    OR (
+        (EXTRACT(MONTH FROM d.date_day - INTERVAL '1 day'), EXTRACT(DAY FROM d.date_day - INTERVAL '1 day')) IN (
+            (1, 1), (12, 25), (12, 26)
+        )
+        AND EXTRACT(DOW FROM d.date_day) = 1  -- Monday
+        AND EXTRACT(DOW FROM d.date_day - INTERVAL '1 day') IN (0, 6)  -- Sunday or Saturday
+    )
+    THEN TRUE
+    ELSE FALSE
+END AS is_holiday_uk
+
+    FROM date_spine d
+)
+
+
+SELECT * FROM dim_date","""warehouse"".""main_gold"".""dim_date""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.454286Z', 'completed_at': '2025-10-10T07:10:43.460108Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.462247Z', 'completed_at': '2025-10-10T07:10:43.666133Z'}]",Thread-1 (worker),0.22043228149414062,OK,,model.local_de_assessment.stg_events,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/events/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+
+  select
+    cast(envelope__event_id as bigint) as event_id,
+    cast(envelope__event_ts as timestamp) as env_event_ts,
+    cast(envelope__event_type as string) as event_type,
+    cast(envelope__user_id as bigint) as user_id,
+    cast(envelope__session_id as string) as session_id,
+    cast(envelope__event_date as date) as event_date,
+    cast(payload__event_ts as timestamp) as payload_event_ts,
+    cast(payload__device as string) as device,
+    cast(payload__ip_address as string) as ip_address,
+    cast(payload__geo_location__lat as double) as latitude,
+    cast(payload__geo_location__lon as double) as longitude,
+    cast(payload__product_id as bigint) as product_id,
+    cast(payload__price as double) as price,
+    cast(payload__action as string) as action,
+--    cast(payload__discount_coupon as boolean) as discount_coupon,
+    cast(payload__session_duration as int) as session_duration,
+    cast(payload__logout_reason as string) as logout_reason,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed
+where latitude between -90 and 90
+and longitude between -180 and 180","""warehouse"".""main_stg"".""stg_events""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.233301Z', 'completed_at': '2025-10-10T07:10:43.283569Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.287520Z', 'completed_at': '2025-10-10T07:10:43.674844Z'}]",Thread-4 (worker),0.4475884437561035,OK,,model.local_de_assessment.stg_customers,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(customer_id as bigint) as customer_id,
+    natural_key,
+    trim(first_name) as first_name,
+    trim(last_name) as last_name,
+    email,
+    phone,
+    address_line1, 
+    address_line2, 
+    city, 
+    cast(state_region as string) as state_region,
+    cast(postcode as BIGINT) as postcode,
+    cast(country_code as string) as country_code,
+    cast(latitude as double) as latitude,
+    cast(longitude as double) as longitude,
+    cast(birth_date as date) as birth_date,   
+-- Derive age
+--    datediff('year', cast(birth_date as date), current_date) as age,
+    cast(join_ts as timestamp) as join_ts,
+    cast(is_vip as boolean) as is_vip,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+    cast(gdpr_consent as boolean) as gdpr_consent,
+      row_number() over (
+        partition by natural_key
+        order by join_ts desc  -- Keep latest join_ts per natural_key
+      ) as row_num
+
+  from bronze_parquet
+)
+
+-- Step 3: Final output with deduplication
+select customer_id,
+       natural_key,
+       first_name,
+       last_name,
+       email,
+       phone,
+       address_line1, 
+       address_line2, 
+       city, 
+       state_region,
+       postcode,
+       country_code,
+       latitude,
+       longitude,
+       birth_date,   
+--       age,
+       join_ts,
+       is_vip,
+       gdpr_consent,
+       ingestion_ts
+ from typed
+where row_num = 1
+and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 
+and latitude between -90 and 90
+and longitude between -180 and 180","""warehouse"".""main_stg"".""stg_customers""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.480151Z', 'completed_at': '2025-10-10T07:10:43.488773Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.489836Z', 'completed_at': '2025-10-10T07:10:43.676691Z'}]",Thread-3 (worker),0.2033214569091797,OK,,model.local_de_assessment.stg_exchangerates,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/exchangerates/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(date as date) as date,
+    cast(currency as string) as currency,
+    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed","""warehouse"".""main_stg"".""stg_exchangerates""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.691724Z', 'completed_at': '2025-10-10T07:10:43.704701Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.705625Z', 'completed_at': '2025-10-10T07:10:43.752624Z'}]",Thread-4 (worker),0.06269454956054688,OK,,model.local_de_assessment.stg_returns,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/returnsall/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+*
+ 
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select *
+from typed","""warehouse"".""main_stg"".""stg_returns""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.483384Z', 'completed_at': '2025-10-10T07:10:43.491988Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.493544Z', 'completed_at': '2025-10-10T07:10:43.908163Z'}]",Thread-2 (worker),0.43410801887512207,OK,,model.local_de_assessment.stg_orderslines,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(order_id as bigint) as order_id,
+    cast(line_number as int) as line_number,
+    cast(product_id as bigint) as product_id,
+    cast(qty as int) as qty,
+    cast(unit_price as decimal(12, 4)) as unit_price,
+    cast(line_discount_pct as decimal(5, 4)) as line_discount_pct,
+    cast(tax_pct as decimal(5, 4)) as tax_pct,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed
+WHERE 
+ product_id IN (
+    SELECT product_id
+    FROM main_stg.stg_products
+) --cleaned out product ids due to intentdbt ruional anomalies or incorrect product ids. to keep referential integrity","""warehouse"".""main_stg"".""stg_orderslines""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.680430Z', 'completed_at': '2025-10-10T07:10:43.695218Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.695952Z', 'completed_at': '2025-10-10T07:10:43.917118Z'}]",Thread-1 (worker),0.24037623405456543,OK,,model.local_de_assessment.stg_products,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/products/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+    cast(product_id as bigint) as product_id,
+    cast(sku as string) as sku,
+    cast(name as string) as name,
+    cast(category as string) as category,
+    cast(subcategory as string) as subcategory,
+    cast(current_price as numeric(12, 4)) as current_price,
+    cast(currency as string) as currency,
+    cast(is_discontinued as boolean) as is_discontinued,
+    cast(introduced_dt as date) as introduced_dt,
+    cast(discontinued_dt as date) as discontinued_dt,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+    -- Generate a surrogate key for SCD 2    
+    md5(cast(coalesce(cast(product_id as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(name as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(category as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(subcategory as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(current_price as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(currency as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(is_discontinued as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(discontinued_dt as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS product_scd_id
+
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed","""warehouse"".""main_stg"".""stg_products""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.935676Z', 'completed_at': '2025-10-10T07:10:43.943417Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.944424Z', 'completed_at': '2025-10-10T07:10:44.052719Z'}]",Thread-1 (worker),0.12561535835266113,OK,,model.local_de_assessment.stg_suppliers,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+    cast(supplier_id as bigint) as supplier_id,
+    cast(supplier_code as string) as supplier_code,
+    cast(name as string) as name,
+    cast(country_code as string) as country_code,
+    cast(lead_time_days as int) as lead_time_days,
+    cast(preffered as boolean) as preferred,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+      row_number() over (
+        partition by supplier_code
+        order by supplier_id asc  
+      ) as row_num
+
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select supplier_id,
+        supplier_code,
+        name,
+        country_code,
+        lead_time_days,
+        preferred,
+        ingestion_ts
+
+ from typed where row_num = 1","""warehouse"".""main_stg"".""stg_suppliers""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.920613Z', 'completed_at': '2025-10-10T07:10:43.929298Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.930610Z', 'completed_at': '2025-10-10T07:10:44.058829Z'}]",Thread-2 (worker),0.14201784133911133,OK,,model.local_de_assessment.stg_stores,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/stores/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+    cast(store_id as bigint) as store_id,
+    cast(store_code as string) as store_code,
+    cast(name as string) as name,
+    cast(channel as string) as channel,
+    cast(region as string) as region,
+    cast(state as string) as state,
+    cast(latitude as double) as latitude,
+    cast(longitude as double) as longitude,
+    cast(open_dt as date) as open_dt,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+    case when trim(close_dt) = '' THEN NULL ELSE cast(close_dt as date)
+        END AS close_dt,
+      row_number() over (
+        partition by store_code
+        order by store_id asc 
+      ) as row_num
+ 
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select store_id,
+        store_code,
+        name,
+        channel,
+        region,
+        state,
+        latitude,
+        longitude,
+        open_dt,
+        close_dt,
+        ingestion_ts
+ from typed
+where latitude between -90 and 90
+and longitude between -180 and 180 
+and row_num = 1","""warehouse"".""main_stg"".""stg_stores""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.062083Z', 'completed_at': '2025-10-10T07:10:44.075007Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.080254Z', 'completed_at': '2025-10-10T07:10:44.197325Z'}]",Thread-1 (worker),0.13921165466308594,OK,,model.local_de_assessment.silver_audit,True,"
+
+with bronze_parquet as (
+  select * from ""warehouse"".""main_stg"".""stg_audit""
+),
+
+typed as (
+  select
+    status,
+    timing,
+    thread_id,
+    execution_time,
+    message,
+    failures,
+    unique_id,
+    compiled,
+    compiled_code,
+    relation_name,
+    batch_results,
+    'adapter_response._message' as adapter_response_message,
+    ingestion_ts
+  from bronze_parquet
+)
+
+select
+  status,
+  timing,
+  json_extract(timing[0], '$.started_at') as compile_started_at,
+  json_extract(timing[0], '$.completed_at') as compile_completed_at,
+  json_extract(timing[1], '$.started_at') as execute_started_at,
+  json_extract(timing[1], '$.completed_at') as execute_completed_at,
+  thread_id,
+  execution_time,
+  message,
+  failures,
+  unique_id,
+  compiled,
+  compiled_code,
+  relation_name,
+  split_part(relation_name, '.', 1) as database,
+  split_part(relation_name, '.', 2) as schema,
+  split_part(relation_name, '.', 3) as table_name,
+  batch_results,
+  adapter_response_message,
+  ingestion_ts,
+    -- Surrogate key using dbt_utils
+    md5(cast(coalesce(cast(unique_id as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(ingestion_ts as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) as audit_id
+  from typed
+
+
+","""warehouse"".""main_silver"".""silver_audit""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.075516Z', 'completed_at': '2025-10-10T07:10:44.124176Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.125219Z', 'completed_at': '2025-10-10T07:10:44.255181Z'}]",Thread-2 (worker),0.1830909252166748,OK,,model.local_de_assessment.silver_events,True,"
+
+SELECT 
+    event_id,
+    env_event_ts,
+    event_type,
+    user_id,
+    session_id,
+    event_date,
+    payload_event_ts,
+    device,
+    ip_address,
+    latitude,
+    longitude,
+    product_id,
+    price,
+    action,
+  --  discount_coupon,
+    session_duration,
+    logout_reason,
+    ingestion_ts
+FROM ""warehouse"".""main_stg"".""stg_events"" 
+","""warehouse"".""main_silver"".""silver_events""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.262377Z', 'completed_at': '2025-10-10T07:10:44.267737Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.268286Z', 'completed_at': '2025-10-10T07:10:44.362192Z'}]",Thread-2 (worker),0.10319280624389648,OK,,model.local_de_assessment.silver_exchangerates,True,"
+
+SELECT 
+    date,
+    currency,
+    rate_to_aud,
+    ingestion_ts
+FROM ""warehouse"".""main_stg"".""stg_exchangerates"" 
+","""warehouse"".""main_silver"".""silver_exchangerates""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.698112Z', 'completed_at': '2025-10-10T07:10:43.709689Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.710033Z', 'completed_at': '2025-10-10T07:10:44.588975Z'}]",Thread-3 (worker),0.9005308151245117,OK,,model.local_de_assessment.stg_sensors,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/sensors/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(sensor_ts as timestamp) as sensor_ts,
+    cast(store_id as bigint) as store_id,
+    cast(shelf_id as string) as shelf_id,
+    cast(temperature_c as decimal(5, 2)) as temperature_c,
+    cast(humidity_pct as decimal(5, 2)) as humidity_pct,
+    cast(battery_mv as int) as battery_mv,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed
+where sensor_ts is not null
+-- moved to curated
+--and temperature_c between 0 and 50 
+--    and humidity_pct between 0 and 100
+--and battery_mv >= 1000
+and 
+ store_id IN (
+    SELECT store_id
+    FROM main_stg.stg_stores
+) --cleaned out store ids due to lat/long anomalies to keep referential integrity","""warehouse"".""main_stg"".""stg_sensors""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.210325Z', 'completed_at': '2025-10-10T07:10:44.220165Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.221102Z', 'completed_at': '2025-10-10T07:10:44.589828Z'}]",Thread-1 (worker),0.3831946849822998,OK,,model.local_de_assessment.silver_customers,True,"
+
+SELECT 
+    customer_id,
+       natural_key,
+       first_name,
+       last_name,
+       email,
+       phone,
+       address_line1, 
+       address_line2, 
+       city, 
+       state_region,
+       postcode,
+       country_code,
+       latitude,
+       longitude,
+       birth_date,   
+        datediff('year', birth_date, ingestion_ts) as age,
+       join_ts,
+       is_vip,
+       gdpr_consent,
+       ingestion_ts
+
+
+FROM ""warehouse"".""main_stg"".""stg_customers""
+
+","""warehouse"".""main_silver"".""silver_customers""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.757374Z', 'completed_at': '2025-10-10T07:10:43.763387Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.763927Z', 'completed_at': '2025-10-10T07:10:45.293121Z'}]",Thread-4 (worker),1.5382659435272217,OK,,model.local_de_assessment.stg_shipments,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/shipments/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+    select
+        cast(shipment_id as bigint) as shipment_id,
+        cast(order_id as bigint) as order_id,
+        cast(carrier as string) as carrier,
+        cast(shipped_at as timestamp) as shipped_at,
+        cast(delivered_at as timestamp) as delivered_at,
+        cast(ship_cost as numeric(12, 2)) as ship_cost,
+        cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed","""warehouse"".""main_stg"".""stg_shipments""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.369135Z', 'completed_at': '2025-10-10T07:10:44.375464Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.376318Z', 'completed_at': '2025-10-10T07:10:45.296759Z'}]",Thread-2 (worker),0.936614990234375,OK,,model.local_de_assessment.silver_returns,True,"
+
+SELECT 
+    return_id,
+      order_id,
+        product_id 
+        ,return_ts
+        ,  qty
+,reason ,
+return_reason_code,
+ source_version,
+  ingestion_ts 
+FROM ""warehouse"".""main_stg"".""stg_returns""
+
+","""warehouse"".""main_silver"".""silver_returns""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.324791Z', 'completed_at': '2025-10-10T07:10:45.330587Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.331254Z', 'completed_at': '2025-10-10T07:10:45.432664Z'}]",Thread-2 (worker),0.12401533126831055,OK,,model.local_de_assessment.silver_suppliers,True,"
+
+SELECT 
+    supplier_id,
+        supplier_code,
+        name,
+        country_code,
+        lead_time_days,
+        preferred,
+        ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_suppliers""
+
+","""warehouse"".""main_silver"".""silver_suppliers""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.609568Z', 'completed_at': '2025-10-10T07:10:44.620018Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.620642Z', 'completed_at': '2025-10-10T07:10:45.431459Z'}]",Thread-1 (worker),0.8378617763519287,OK,,model.local_de_assessment.silver_products,True,"
+
+
+WITH source AS (
+  SELECT 
+    product_id,
+    sku,
+    name,
+    category,
+    subcategory,
+    current_price,
+    currency,
+    is_discontinued,
+    introduced_dt,
+    discontinued_dt,
+    ingestion_ts,
+    product_scd_id,
+    CURRENT_DATE AS effective_from,
+    NULL AS effective_to,
+    TRUE AS is_current
+  FROM ""warehouse"".""main_stg"".""stg_products""
+  
+)
+,
+
+new_records AS (
+  SELECT *
+  FROM source
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM ""warehouse"".""main_silver"".""silver_products""
+    WHERE product_scd_id = source.product_scd_id
+      AND is_current = TRUE
+  )
+),
+
+expired_records AS (
+  SELECT 
+    product_id,
+    sku,
+    name,
+    category,
+    subcategory,
+    current_price,
+    currency,
+    is_discontinued,
+    introduced_dt,
+    discontinued_dt,
+    ingestion_ts,
+    product_scd_id,
+    effective_from,
+    CURRENT_DATE AS effective_to,
+    FALSE AS is_current
+  FROM ""warehouse"".""main_silver"".""silver_products""
+  WHERE is_current = TRUE
+    AND product_scd_id IN (
+      SELECT product_scd_id FROM new_records
+    )
+)
+---SCD retain expired records updating current and effective to status as and UNION new records with same surrogate key
+
+SELECT * FROM new_records
+UNION ALL
+SELECT * FROM expired_records","""warehouse"".""main_silver"".""silver_products""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.308383Z', 'completed_at': '2025-10-10T07:10:45.314889Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.316531Z', 'completed_at': '2025-10-10T07:10:45.449553Z'}]",Thread-4 (worker),0.14511704444885254,OK,,model.local_de_assessment.dim_supplier,True,"
+
+WITH silver AS (
+    -- Reference your Silver layer model
+    SELECT     
+        supplier_id,
+        supplier_code,
+        name,
+        country_code,
+        
+    -- Random region assignment (can go back and have a more concise list of country codes and map it like that as a stretch goal)
+        CASE 
+            WHEN RANDOM() < 0.25 THEN 'America'
+            WHEN RANDOM() < 0.5 THEN 'Europe'
+            WHEN RANDOM() < 0.75 THEN 'Asia'
+            ELSE 'Oceania'
+        END AS region,
+
+        lead_time_days,
+        preferred
+         FROM ""warehouse"".""main_stg"".""stg_suppliers"" 
+),
+enhanced AS (
+    SELECT
+       supplier_id,
+        supplier_code,
+        name,
+        country_code,
+        region
+        lead_time_days,
+        preferred,
+        lead_time_days,
+CASE
+    WHEN lead_time_days <= 7 THEN 'Tier 1'
+    WHEN lead_time_days <= 14 THEN 'Tier 2'
+    ELSE 'Tier 3'
+END AS supplier_tier
+
+
+
+    FROM silver
+)
+SELECT 
+    md5(cast(coalesce(cast(supplier_id as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS supplier_sk,
+    * 
+FROM enhanced","""warehouse"".""main_gold"".""dim_supplier""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.600355Z', 'completed_at': '2025-10-10T07:10:44.613808Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.614505Z', 'completed_at': '2025-10-10T07:10:45.470504Z'}]",Thread-3 (worker),0.8830766677856445,OK,,model.local_de_assessment.silver_orderslines,True,"
+
+SELECT 
+    order_id,
+    line_number,
+    product_id,
+    qty,
+    unit_price,
+    line_discount_pct,
+    tax_pct,
+    ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_orderslines"" 
+
+","""warehouse"".""main_silver"".""silver_orderslines""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.494204Z', 'completed_at': '2025-10-10T07:10:45.502862Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.504271Z', 'completed_at': '2025-10-10T07:10:45.594904Z'}]",Thread-3 (worker),0.10601067543029785,OK,,model.local_de_assessment.invalid_store_ids,True,"select store_id
+from ""warehouse"".""main_stg"".""stg_sensors""
+where store_id not in (
+  select store_id from ""warehouse"".""main_stg"".""stg_stores""
+)
+group by store_id","""warehouse"".""main"".""invalid_store_ids""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.477650Z', 'completed_at': '2025-10-10T07:10:45.484364Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.485445Z', 'completed_at': '2025-10-10T07:10:45.610640Z'}]",Thread-4 (worker),0.14114952087402344,OK,,model.local_de_assessment.fct_ingestion_audit,True,"
+
+SELECT 
+
+  status,
+  timing,
+ compile_started_at,
+  compile_completed_at,
+   execute_started_at,
+  execute_completed_at,
+  thread_id,
+  execution_time,
+  message,
+  failures,
+  unique_id,
+  compiled,
+  compiled_code,
+  relation_name,
+   database,
+   schema,
+  table_name,
+  batch_results,
+  adapter_response_message,
+  ingestion_ts,
+ audit_id
+ 
+    -- Pipeline Health Metrics
+ --  try_cast(json_extract(batch_results, '$.rows_processed') as int) as rows_processed,
+  --  execution_time as processing_time_seconds,
+ --   try_cast(json_extract(adapter_response_message, '$.file_size_bytes') as int) as file_size_bytes
+--
+
+
+FROM ""warehouse"".""main_silver"".""silver_audit""
+
+","""warehouse"".""main_gold"".""fct_ingestion_audit""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.453065Z', 'completed_at': '2025-10-10T07:10:45.464295Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.465451Z', 'completed_at': '2025-10-10T07:10:45.570835Z'}]",Thread-2 (worker),0.12718677520751953,OK,,model.local_de_assessment.silver_stores,True,"
+
+SELECT 
+        store_id,
+        store_code,
+        name,
+        channel,
+        region,
+        state,
+        latitude,
+        longitude,
+        open_dt as open_date,
+        close_dt as close_date,
+        ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_stores""
+
+","""warehouse"".""main_silver"".""silver_stores""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.460678Z', 'completed_at': '2025-10-10T07:10:45.471114Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.473213Z', 'completed_at': '2025-10-10T07:10:46.712705Z'}]",Thread-1 (worker),1.2561531066894531,OK,,model.local_de_assessment.stg_ordersheader,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/ordersheader/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+
+  select
+    cast(order_id as bigint) as order_id,
+    cast(order_ts as timestamp) as order_ts,
+    cast(order_dt_local as date) as order_dt_local,
+    cast(customer_id as bigint) as customer_id,
+    cast(store_id as bigint) as store_id,
+    cast(channel as varchar) as channel,
+    cast(payment_method as varchar) as payment_method,
+    cast(coupon_code as varchar) as coupon_code,
+    cast(shipping_fee as decimal(12, 2)) as shipping_fee,
+    cast(currency as varchar) as currency,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+ --deduplicate based on order_id, keeping the latest order_ts
+        row_number() over (
+            partition by order_id
+            order by order_ts desc  -- or any other logic to keep the ""latest"" or ""first""
+        ) as row_num
+
+  from bronze_parquet
+)
+
+-- Step 3: Final output deduplication
+
+
+SELECT order_id,
+       order_ts,
+       order_dt_local,
+       customer_id,
+       store_id,
+       channel,
+       payment_method,
+       coupon_code,
+       shipping_fee,
+       currency,
+       ingestion_ts
+FROM typed t
+WHERE EXISTS (
+    SELECT 1
+    FROM ""warehouse"".""main_stg"".""stg_customers"" c
+    WHERE t.customer_id = c.customer_id
+)
+and exists (
+    select 1
+    from ""warehouse"".""main_stg"".""stg_stores"" s
+    where t.store_id = s.store_id
+)
+and row_num = 1","""warehouse"".""main_stg"".""stg_ordersheader""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.305270Z', 'completed_at': '2025-10-10T07:10:47.321306Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.324317Z', 'completed_at': '2025-10-10T07:10:47.394417Z'}]",Thread-1 (worker),0.09742903709411621,OK,,model.local_de_assessment.dim_product_scd,True,"
+
+WITH silver AS (
+    -- Reference your Silver layer model
+    SELECT     
+    product_scd_id,
+    product_id,
+    sku,
+    name,
+    category,
+    subcategory,
+    current_price,
+    currency,
+    is_discontinued,
+    introduced_dt,
+    discontinued_dt,
+    effective_from,
+    effective_to,
+    is_current
+         FROM ""warehouse"".""main_silver"".""silver_products"" s
+
+),
+enhanced AS (
+    SELECT
+    product_scd_id,
+    product_id,
+    sku,
+    name,
+    category,
+    subcategory,
+    current_price,
+    currency,
+    is_discontinued,
+    introduced_dt as introduced_date,
+    discontinued_dt as discontinued_date,
+    effective_from as effective_from_date,
+    effective_to as effective_to_date, 
+    is_current,
+    CASE 
+      WHEN current_price != LAG(current_price) OVER (PARTITION BY product_id ORDER BY effective_from)
+      THEN TRUE ELSE FALSE
+    END AS is_price_change
+
+    FROM silver
+)
+SELECT 
+    * 
+FROM enhanced","""warehouse"".""main_gold"".""dim_product_scd""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.399654Z', 'completed_at': '2025-10-10T07:10:47.406079Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.406646Z', 'completed_at': '2025-10-10T07:10:47.456825Z'}]",Thread-1 (worker),0.05866360664367676,OK,,model.local_de_assessment.dim_store,True,"
+
+WITH silver AS (
+    -- Reference your Silver layer model
+    SELECT     
+        store_id,
+        store_code,
+        name,
+        channel,
+        region,
+        state,
+        latitude,
+        longitude,
+        open_date,
+        close_date
+         FROM ""warehouse"".""main_silver"".""silver_stores"" s
+
+),
+enhanced AS (
+    SELECT
+        store_id,
+        store_code,
+        name,
+        channel,
+        region,
+        state,
+        latitude,
+        longitude,
+        open_date,
+        close_date,
+    CASE
+        WHEN close_date IS NULL THEN CURRENT_DATE - open_date
+        ELSE close_date - open_date
+    END AS store_age_days,
+    CASE
+        WHEN close_date IS NULL AND channel = 'online'
+            THEN 'large'
+        WHEN close_date IS NULL AND channel = 'retail' 
+            THEN 
+                    CASE 
+                        WHEN RANDOM() < 0.5 THEN 'medium'
+                        ELSE 'small'
+                    END
+        ELSE NULL
+        END AS store_size_category,
+    CASE
+        WHEN close_date IS NULL THEN false
+        ELSE  true
+    END AS operational_status
+    FROM silver
+)
+SELECT 
+    md5(cast(coalesce(cast(store_id as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS store_sk,
+    * 
+FROM enhanced","""warehouse"".""main_gold"".""dim_store""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.293955Z', 'completed_at': '2025-10-10T07:10:47.311124Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.311751Z', 'completed_at': '2025-10-10T07:10:47.635618Z'}]",Thread-3 (worker),0.3499727249145508,OK,,model.local_de_assessment.silver_sensors,True,"
+
+SELECT 
+    sensor_ts,
+    store_id,
+    shelf_id,
+    temperature_c,
+    humidity_pct,
+    battery_mv,
+    ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_sensors""
+
+","""warehouse"".""main_silver"".""silver_sensors""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.301939Z', 'completed_at': '2025-10-10T07:10:47.320985Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.321971Z', 'completed_at': '2025-10-10T07:10:47.637654Z'}]",Thread-2 (worker),0.3475790023803711,OK,,model.local_de_assessment.silver_shipments,True,"
+
+SELECT 
+        shipment_id,
+        order_id,
+        carrier,
+        shipped_at,
+        delivered_at,
+        ship_cost,
+        ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_shipments""
+
+","""warehouse"".""main_silver"".""silver_shipments""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.298498Z', 'completed_at': '2025-10-10T07:10:47.317665Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.318485Z', 'completed_at': '2025-10-10T07:10:47.682599Z'}]",Thread-4 (worker),0.3915235996246338,OK,,model.local_de_assessment.dim_customer,True,"
+
+WITH silver AS (
+    -- Reference your Silver layer model
+    SELECT     
+        customer_id,
+       natural_key,
+       first_name,
+       last_name,
+       email,
+       phone,
+       address_line1, 
+       address_line2, 
+       city, 
+       state_region,
+       postcode,
+       country_code,
+       latitude,
+       longitude,
+       birth_date,   
+--        age,
+       join_ts,
+       is_vip,
+       gdpr_consent,
+       ingestion_ts FROM ""warehouse"".""main_silver"".""silver_customers""
+),
+enhanced AS (
+    SELECT
+        customer_id,
+       natural_key,
+       first_name,
+       last_name,
+    -- Apply GDPR masking
+        CASE 
+            WHEN gdpr_consent = false THEN md5(email)
+            ELSE email
+        END AS email,       
+
+        CASE 
+            WHEN gdpr_consent = false THEN 'XXX-XXX-XXXX'
+            ELSE phone
+        END AS phone_number,
+        
+        CASE 
+                WHEN gdpr_consent = false THEN null
+                ELSE address_line1
+        END AS address_line1,
+        CASE 
+                WHEN gdpr_consent = false THEN null
+                ELSE address_line2
+        END AS address_line2,
+       city, 
+       state_region,
+       postcode,
+       country_code,
+       latitude,
+       longitude,
+       birth_date,  
+        EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) AS customer_age,
+        CURRENT_DATE - CAST(join_ts AS Date) AS customer_lifetime_days, 
+       join_ts,
+       is_vip,
+       gdpr_consent,
+       
+        CASE 
+            WHEN is_vip = true THEN 'VIP'
+            WHEN CURRENT_DATE - CAST(join_ts AS Date) < 180 THEN 'New'
+            ELSE 'Standard'
+        END AS customer_segment
+
+ --      ingestion_ts 
+    FROM silver
+)
+SELECT 
+    md5(cast(coalesce(cast(customer_id as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS customer_sk,
+    * 
+FROM enhanced","""warehouse"".""main_gold"".""dim_customer""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.648021Z', 'completed_at': '2025-10-10T07:10:47.658290Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.659261Z', 'completed_at': '2025-10-10T07:10:48.072317Z'}]",Thread-3 (worker),0.4274580478668213,OK,,model.local_de_assessment.silver_orders,True,"
+
+SELECT 
+    order_id,
+    order_ts,
+    order_dt_local AS order_date,
+    customer_id,
+    store_id,
+    channel,
+    payment_method,
+    coupon_code,
+    shipping_fee,
+    currency,
+    ingestion_ts
+FROM ""warehouse"".""main_stg"".""stg_ordersheader"" 
+","""warehouse"".""main_silver"".""silver_orders""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:48.079478Z', 'completed_at': '2025-10-10T07:10:48.091984Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:48.092626Z', 'completed_at': '2025-10-10T07:10:48.177534Z'}]",Thread-4 (worker),0.10214853286743164,OK,,model.local_de_assessment.fct_returns,True,"
+
+WITH latest_ingestion AS (
+  SELECT MAX(ingestion_ts) AS max_ingestion_ts
+  FROM ""warehouse"".""main_gold"".""fct_returns""
+),
+
+returns_filtered AS (
+  SELECT 
+    r.return_id,
+    r.order_id,
+    r.product_id,
+    r.return_ts,
+    r.qty AS return_qty,
+    r.reason AS return_reason,
+    r.return_reason_code,
+    r.source_version,
+    r.ingestion_ts
+  FROM ""warehouse"".""main_silver"".""silver_returns"" r
+  JOIN ""warehouse"".""main_gold"".""dim_product_scd"" p 
+       ON r.product_id = p.product_id 
+  JOIN ""warehouse"".""main_silver"".""silver_orders"" o 
+       ON r.order_id = o.order_id
+  
+)
+
+SELECT * FROM returns_filtered","""warehouse"".""main_gold"".""fct_returns""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:48.085080Z', 'completed_at': '2025-10-10T07:10:48.095843Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:48.099670Z', 'completed_at': '2025-10-10T07:10:48.219913Z'}]",Thread-3 (worker),0.14384889602661133,OK,,model.local_de_assessment.fct_sales,True,"
+
+WITH sales_enriched AS (
+  SELECT 
+    ol.order_id || '-' || ol.line_number AS sale_id,
+    ol.order_id,
+    ol.line_number,
+    oh.order_ts,
+    oh.order_date,
+    oh.customer_id,
+    ol.product_id,
+    p.currency AS product_currency,
+    qty,
+    ROUND(ol.unit_price, 2)  as unit_price,
+    ROUND(er.rate_to_aud, 2) AS rate_to_aud,
+    --  actual percentages
+    ROUND(100 * ol.line_discount_pct, 2) AS line_discount_pct,
+    ROUND(100 * ol.tax_pct, 2) AS tax_pct,
+
+    -- Order metadata
+    oh.store_id,
+    oh.channel,
+    oh.payment_method,
+    oh.coupon_code,
+    ROUND(oh.shipping_fee, 2) AS shipping_fee_aud,
+    oh.currency AS order_currency,
+    oh.ingestion_ts AS ingestion_ts
+  FROM ""warehouse"".""main_silver"".""silver_orderslines"" ol
+  JOIN ""warehouse"".""main_silver"".""silver_orders"" oh 
+       ON oh.order_id = ol.order_id
+  JOIN ""warehouse"".""main_silver"".""silver_products"" p 
+       ON ol.product_id = p.product_id 
+  JOIN ""warehouse"".""main_silver"".""silver_exchangerates"" er
+       ON oh.order_date = er.date AND p.currency = er.currency
+  
+
+)
+
+
+SELECT 
+  sale_id,
+  order_id,
+  line_number,
+  order_ts,
+  line_number,
+  order_date,
+  customer_id,
+  product_id,
+  product_currency,
+  qty,
+  unit_price,
+  line_discount_pct,
+  tax_pct,
+  rate_to_aud,
+ROUND(CAST(qty * unit_price AS DECIMAL(38, 2)), 2) AS gross_amount,
+ROUND(CAST(qty * unit_price * rate_to_aud AS DECIMAL(38, 2)), 2) AS gross_amount_aud,
+ROUND(CAST(qty * unit_price * (1 - line_discount_pct / 100) * (1 + tax_pct / 100) AS DECIMAL(38, 2)), 2) AS total_amount,
+ROUND(CAST(qty * unit_price * rate_to_aud * (1 - line_discount_pct / 100) * (1 + tax_pct / 100) AS DECIMAL(38, 2)), 2) AS total_amount_aud,
+  store_id,
+  channel,
+  payment_method,
+  coupon_code,
+  shipping_fee_aud,
+  order_currency,
+  ingestion_ts
+
+FROM sales_enriched","""warehouse"".""main_gold"".""fct_sales""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:48.188583Z', 'completed_at': '2025-10-10T07:10:48.195264Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:48.195812Z', 'completed_at': '2025-10-10T07:10:48.737262Z'}]",Thread-4 (worker),0.5530974864959717,OK,,model.local_de_assessment.fct_shipments,True,"
+
+SELECT 
+        s.shipment_id,
+        s.order_id,
+        s.carrier,
+        o.shipping_fee,
+        s.shipped_at,
+        s.delivered_at,
+        s.ship_cost as shipping_cost,
+        s.ingestion_ts,
+        
+  -- Calculate delivery days only if delivered
+  CASE 
+   
+  WHEN s.delivered_at IS NOT NULL THEN datediff('day', s.shipped_at, s.delivered_at)
+  ELSE NULL
+
+  END AS delivery_days,
+
+ -- Flag late deliveries based on SLA (e.g., 5 days)
+  CASE 
+    WHEN s.delivered_at IS NOT NULL AND s.delivered_at <= s.shipped_at + INTERVAL '5 days' THEN TRUE
+    ELSE FALSE
+  END AS on_time_flag
+
+FROM ""warehouse"".""main_silver"".""silver_shipments"" s
+JOIN ""warehouse"".""main_silver"".""silver_orders"" o
+on s.order_id = o.order_id
+","""warehouse"".""main_gold"".""fct_shipments""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.652840Z', 'completed_at': '2025-10-10T07:10:47.662993Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.666542Z', 'completed_at': '2025-10-10T07:10:48.874506Z'}]",Thread-2 (worker),1.2295265197753906,OK,,model.local_de_assessment.fct_sensor_readings,True,"
+
+WITH base AS (
+    SELECT 
+        sensor_ts,
+        store_id,
+        shelf_id,
+        temperature_c,
+        humidity_pct,
+        battery_mv
+    FROM ""warehouse"".""main_silver"".""silver_sensors""
+),
+
+hourly_aggregates AS (
+    SELECT
+        store_id,
+        shelf_id,
+        --pre aggregations
+        DATE_TRUNC('day', sensor_ts) AS sensor_date,
+        DATE_TRUNC('hour', sensor_ts) AS hour_ts,
+        AVG(temperature_c) AS avg_temperature_c,
+        AVG(humidity_pct) AS avg_humidity_pct,
+        AVG(battery_mv) AS avg_battery_mv,
+
+        -- Anomaly flags based on hourly averages
+        CASE 
+            WHEN AVG(temperature_c) < 0 OR AVG(temperature_c) > 50 THEN TRUE 
+            ELSE FALSE 
+        END AS is_anom_temp,
+
+        CASE 
+            WHEN AVG(humidity_pct) < 0 OR AVG(humidity_pct) > 100 THEN TRUE 
+            ELSE FALSE 
+        END AS is_anom_humidity,
+
+        CASE 
+            WHEN AVG(battery_mv) < 1000 THEN TRUE 
+            ELSE FALSE 
+        END AS is_anom_bat_mv
+    FROM base
+    GROUP BY store_id, shelf_id, DATE_TRUNC('day', sensor_ts), DATE_TRUNC('hour', sensor_ts), 
+),
+
+final AS (
+    SELECT
+        *,
+        -- Rolling 3-hour average temperature
+        AVG(avg_temperature_c) OVER (
+            PARTITION BY store_id, shelf_id 
+            ORDER BY hour_ts 
+            ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        ) AS rolling_avg_temp_3h,
+
+        -- Rolling 3-hour average humidity
+        AVG(avg_humidity_pct) OVER (
+            PARTITION BY store_id, shelf_id 
+            ORDER BY hour_ts 
+            ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        ) AS rolling_avg_humidity_3h,
+
+        -- Rolling 3-hour average battery voltage
+        AVG(avg_battery_mv) OVER (
+            PARTITION BY store_id, shelf_id 
+            ORDER BY hour_ts 
+            ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        ) AS rolling_avg_battery_mv_3h
+    FROM hourly_aggregates
+    
+)
+
+SELECT * FROM final","""warehouse"".""main_gold"".""fct_sensor_readings""",,OK,2025-10-10 07:11:07.490323
+success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.461361Z', 'completed_at': '2025-10-10T07:10:47.470456Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.470940Z', 'completed_at': '2025-10-10T07:10:48.956626Z'}]",Thread-1 (worker),1.4986896514892578,OK,,model.local_de_assessment.silver_fct_sales,True,"
+
+SELECT 
+    -- From ordersheader
+    oh.order_id,
+    oh.order_ts,
+    oh.order_dt_local AS order_dt,
+    oh.customer_id,
+    oh.store_id,
+    oh.channel,
+    oh.payment_method,
+    oh.coupon_code,
+    oh.shipping_fee,
+    oh.currency,
+    oh.ingestion_ts AS header_ingestion_ts,
+
+    -- From orderslines
+    ol.line_number,
+    ol.product_id,
+    ol.qty,
+    ol.unit_price,
+    ol.line_discount_pct,
+    ol.tax_pct,
+    ol.ingestion_ts AS line_ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_ordersheader"" oh
+JOIN ""warehouse"".""main_stg"".""stg_orderslines"" ol 
+  ON oh.order_id = ol.order_id
+
+","""warehouse"".""main_silver"".""silver_fct_sales""",,OK,2025-10-10 07:11:07.490323

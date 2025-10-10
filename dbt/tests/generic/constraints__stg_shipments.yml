@@ -1,0 +1,44 @@
+
+version: 2
+
+models:
+  - name: stg_shipments
+    description: "Staging model for shipments with enforced column contracts"
+    columns:
+      - name: shipment_id
+        data_type: bigint
+        description: "Unique identifier for the shipment"
+        tests: [not_null, unique]
+
+      - name: order_id
+        data_type: bigint
+        description: "Identifier of the related order"
+        tests: 
+          - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
+          - foreign_key_violation_rate:
+              parent_model: ref('stg_orders')
+              parent_key: order_id
+      - name: carrier
+        data_type: string
+        description: "Shipping carrier used for the delivery"
+
+      - name: shipped_at
+        data_type: timestamp
+        description: "Timestamp when the shipment was dispatched"
+
+      - name: delivered_at
+        data_type: timestamp
+        description: "Timestamp when the shipment was delivered"
+
+      - name: ship_cost
+        data_type: numeric(12, 2)
+        description: "Cost of shipping the order"
+        tests:
+          - not_null
+          - not_negative
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Ingestion timestamp"
