@@ -1,3 +1,6 @@
+# THE REPORT PBIX HAS BEEN PUBLISHED TO MY PERSONAL WORKSPACE DUE TO SIZE RESTRAINTS AND LINKED HERE
+https://app.fabric.microsoft.com/links/vnlApee5oi?ctid=6c637512-c417-4e78-9d62-b61258e4b619&pbi_source=linkShare&bookmarkGuid=a47eefb2-eef5-473c-b648-6145fc9ec98d
+
 # Mid-Level Data Engineer Assessment (Local Only)
 
 ## Overview

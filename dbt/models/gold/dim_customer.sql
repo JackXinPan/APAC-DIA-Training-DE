@@ -63,6 +63,15 @@ enhanced AS (
        birth_date,  
         EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) AS customer_age,
         CURRENT_DATE - CAST(join_ts AS Date) AS customer_lifetime_days, 
+        
+    CASE
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) < 18 THEN 'Underage'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) BETWEEN 18 AND 24 THEN 'Youth'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) BETWEEN 25 AND 44 THEN 'Adult'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) BETWEEN 45 AND 64 THEN 'Middle-aged'
+        ELSE 'Senior'
+    END AS age_demographic,
+
        join_ts,
        is_vip,
        gdpr_consent,
