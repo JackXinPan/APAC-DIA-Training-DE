@@ -28,3 +28,12 @@ models:
 vars:
   default_timezone: 'Australia/Perth'
   lake_root: '../lake/bronze/parquet/retail_bronze_dataset'
+
+
+
+seeds:
+  local_de_assessment:
+    run_results_table:
+      column_types:
+        ingestion_ts: timestamp   
+

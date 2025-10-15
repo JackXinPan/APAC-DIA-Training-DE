@@ -20,6 +20,7 @@ returns_filtered AS (
     r.reason AS return_reason,
     r.return_reason_code,
     r.source_version,
+     CAST(r.return_ts AS DATE) AS return_date,
     r.ingestion_ts
   FROM {{ ref('silver_returns') }} r
   JOIN {{ ref('dim_product_scd') }} p 

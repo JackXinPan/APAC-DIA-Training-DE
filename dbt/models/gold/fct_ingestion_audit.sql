@@ -10,10 +10,12 @@ SELECT
 
   status,
   timing,
- compile_started_at,
-  compile_completed_at,
-   execute_started_at,
-  execute_completed_at,
+
+CAST(json_extract(timing[1], '$.started_at') AS TIMESTAMP) AS compile_started_at,
+CAST(json_extract(timing[1], '$.completed_at') AS TIMESTAMP) AS compile_completed_at,
+CAST(json_extract(timing[2], '$.started_at') AS TIMESTAMP) AS execute_started_at,
+CAST(json_extract(timing[2], '$.completed_at') AS TIMESTAMP) AS execute_completed_at,
+
   thread_id,
   execution_time,
   message,
@@ -22,9 +24,9 @@ SELECT
   compiled,
   compiled_code,
   relation_name,
-   database,
-   schema,
-  table_name,
+  split_part(relation_name, '.', 1) as database,
+  split_part(relation_name, '.', 2) as schema,
+  split_part(relation_name, '.', 3) as table_name,
   batch_results,
   adapter_response_message,
   ingestion_ts,
@@ -37,7 +39,7 @@ SELECT
 --
 
 
-FROM {{ ref('silver_audit') }}
+FROM {{ ref('silver_audit_seed') }}
 
 {% if is_incremental() %}
 WHERE ingestion_ts > (

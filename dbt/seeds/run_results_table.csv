@@ -1,5 +1,35 @@
 status,timing,thread_id,execution_time,message,failures,unique_id,compiled,compiled_code,relation_name,batch_results,adapter_response._message,ingestion_ts
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.221235Z', 'completed_at': '2025-10-10T07:10:43.239215Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.268693Z', 'completed_at': '2025-10-10T07:10:43.412651Z'}]",Thread-1 (worker),0.2005784511566162,OK,,model.local_de_assessment._sources,True,"-- External views pointing at Bronze Parquet/Delta. Adjust path if needed.
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.511188Z', 'completed_at': '2025-10-15T07:34:17.533060Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.533835Z', 'completed_at': '2025-10-15T07:34:17.689347Z'}]",Thread-3 (worker),0.18915700912475586,OK,,model.local_de_assessment.silver_audit_seed,True,"
+
+
+
+
+  
+
+
+
+  -- Seed table doesn't exist yet, return empty result with correct schema
+  select *
+  from (
+    select
+      cast(null as string) as status,
+      cast(null as string) as timing,
+      cast(null as string) as thread_id,
+      cast(null as float) as execution_time,
+      cast(null as string) as message,
+      cast(null as int) as failures,
+      cast(null as string) as unique_id,
+      cast(null as string) as compiled,
+      cast(null as string) as compiled_code,
+      cast(null as string) as relation_name,
+      cast(null as string) as batch_results,
+      cast(null as string) as adapter_response_message,
+      cast(null as timestamp) as ingestion_ts,
+      cast(null as string) as audit_id
+  ) as empty_result
+  where false
+","""warehouse"".""main_silver"".""silver_audit_seed""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.526189Z', 'completed_at': '2025-10-15T07:34:17.581630Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.595979Z', 'completed_at': '2025-10-15T07:34:17.721914Z'}]",Thread-1 (worker),0.21637678146362305,OK,,model.local_de_assessment._sources,True,"-- External views pointing at Bronze Parquet/Delta. Adjust path if needed.
 
 
 
@@ -17,8 +47,8 @@ success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.221235Z', 'comp
 
 --
 
---select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet')","""warehouse"".""main_stg"".""_sources""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.231100Z', 'completed_at': '2025-10-10T07:10:43.239914Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.284050Z', 'completed_at': '2025-10-10T07:10:43.461215Z'}]",Thread-3 (worker),0.24553990364074707,OK,,model.local_de_assessment.stg_audit,True,"
+--select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/customers/*.parquet')","""warehouse"".""main_stg"".""_sources""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.529921Z', 'completed_at': '2025-10-15T07:34:17.582573Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.623223Z', 'completed_at': '2025-10-15T07:34:17.823740Z'}]",Thread-4 (worker),0.3217048645019531,OK,,model.local_de_assessment.stg_audit,True,"
 
 with bronze_parquet as (
   select * from read_parquet('seeds/run_results_table.parquet')
@@ -32,8 +62,8 @@ typed as (
 
 select
   *
-from typed","""warehouse"".""main_stg"".""stg_audit""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.227338Z', 'completed_at': '2025-10-10T07:10:43.238491Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.240571Z', 'completed_at': '2025-10-10T07:10:43.465946Z'}]",Thread-2 (worker),0.24776721000671387,OK,,model.local_de_assessment.dim_date,True,"
+from typed","""warehouse"".""main_stg"".""stg_audit""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.521867Z', 'completed_at': '2025-10-15T07:34:17.582046Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.611837Z', 'completed_at': '2025-10-15T07:34:17.875548Z'}]",Thread-2 (worker),0.37289905548095703,OK,,model.local_de_assessment.dim_date,True,"
 
 
 
@@ -210,8 +240,8 @@ END AS is_holiday_uk
 )
 
 
-SELECT * FROM dim_date","""warehouse"".""main_gold"".""dim_date""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.454286Z', 'completed_at': '2025-10-10T07:10:43.460108Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.462247Z', 'completed_at': '2025-10-10T07:10:43.666133Z'}]",Thread-1 (worker),0.22043228149414062,OK,,model.local_de_assessment.stg_events,True,"
+SELECT * FROM dim_date","""warehouse"".""main_gold"".""dim_date""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.778635Z', 'completed_at': '2025-10-15T07:34:17.792781Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.808895Z', 'completed_at': '2025-10-15T07:34:18.042673Z'}]",Thread-1 (worker),0.30309081077575684,OK,,model.local_de_assessment.stg_events,True,"
 
 
 
@@ -250,8 +280,83 @@ typed as (
 -- Step 3: Final output
 select * from typed
 where latitude between -90 and 90
-and longitude between -180 and 180","""warehouse"".""main_stg"".""stg_events""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.233301Z', 'completed_at': '2025-10-10T07:10:43.283569Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.287520Z', 'completed_at': '2025-10-10T07:10:43.674844Z'}]",Thread-4 (worker),0.4475884437561035,OK,,model.local_de_assessment.stg_customers,True,"
+and longitude between -180 and 180","""warehouse"".""main_stg"".""stg_events""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.894143Z', 'completed_at': '2025-10-15T07:34:17.905473Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.912072Z', 'completed_at': '2025-10-15T07:34:18.123818Z'}]",Thread-4 (worker),0.24071979522705078,OK,,model.local_de_assessment.stg_exchangerates,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/exchangerates/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(date as date) as date,
+    cast(currency as string) as currency,
+    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed","""warehouse"".""main_stg"".""stg_exchangerates""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.133840Z', 'completed_at': '2025-10-15T07:34:18.141716Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.143152Z', 'completed_at': '2025-10-15T07:34:18.214248Z'}]",Thread-4 (worker),0.08453893661499023,OK,,model.local_de_assessment.stg_returns,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/returnscombined/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+*
+ 
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select *
+from typed","""warehouse"".""main_stg"".""stg_returns""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.053667Z', 'completed_at': '2025-10-15T07:34:18.088984Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.089725Z', 'completed_at': '2025-10-15T07:34:18.384455Z'}]",Thread-1 (worker),0.33321046829223633,OK,,model.local_de_assessment.stg_products,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/products/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+    cast(product_id as bigint) as product_id,
+    cast(sku as string) as sku,
+    cast(name as string) as name,
+    cast(category as string) as category,
+    cast(subcategory as string) as subcategory,
+    cast(current_price as numeric(12, 4)) as current_price,
+    cast(currency as string) as currency,
+    cast(is_discontinued as boolean) as is_discontinued,
+    cast(introduced_dt as date) as introduced_dt,
+    cast(discontinued_dt as date) as discontinued_dt,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+    -- Generate a surrogate key for SCD 2    
+    md5(cast(coalesce(cast(product_id as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(name as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(category as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(subcategory as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(current_price as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(currency as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(is_discontinued as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(discontinued_dt as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS product_scd_id
+
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed","""warehouse"".""main_stg"".""stg_products""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.730405Z', 'completed_at': '2025-10-15T07:34:17.739434Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.741593Z', 'completed_at': '2025-10-15T07:34:18.378479Z'}]",Thread-3 (worker),0.6565876007080078,OK,,model.local_de_assessment.stg_customers,True,"
 
 
 
@@ -318,152 +423,8 @@ select customer_id,
 where row_num = 1
 and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 
 and latitude between -90 and 90
-and longitude between -180 and 180","""warehouse"".""main_stg"".""stg_customers""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.480151Z', 'completed_at': '2025-10-10T07:10:43.488773Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.489836Z', 'completed_at': '2025-10-10T07:10:43.676691Z'}]",Thread-3 (worker),0.2033214569091797,OK,,model.local_de_assessment.stg_exchangerates,True,"
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/exchangerates/*.parquet')
-),
-
--- Step 2: Apply transformations
-typed as (
-  select
-    cast(date as date) as date,
-    cast(currency as string) as currency,
-    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud,
-    cast(ingestion_ts as timestamp) as ingestion_ts
-  from bronze_parquet
-)
-
--- Step 3: Final output
-select * from typed","""warehouse"".""main_stg"".""stg_exchangerates""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.691724Z', 'completed_at': '2025-10-10T07:10:43.704701Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.705625Z', 'completed_at': '2025-10-10T07:10:43.752624Z'}]",Thread-4 (worker),0.06269454956054688,OK,,model.local_de_assessment.stg_returns,True,"
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/returnsall/*.parquet')
-),
-
-
--- Step 2: Apply transformations
-typed as (
-select
-*
- 
-from bronze_parquet
-)
-
--- Step 3: Final output
-select *
-from typed","""warehouse"".""main_stg"".""stg_returns""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.483384Z', 'completed_at': '2025-10-10T07:10:43.491988Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.493544Z', 'completed_at': '2025-10-10T07:10:43.908163Z'}]",Thread-2 (worker),0.43410801887512207,OK,,model.local_de_assessment.stg_orderslines,True,"
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet')
-),
-
--- Step 2: Apply transformations
-typed as (
-  select
-    cast(order_id as bigint) as order_id,
-    cast(line_number as int) as line_number,
-    cast(product_id as bigint) as product_id,
-    cast(qty as int) as qty,
-    cast(unit_price as decimal(12, 4)) as unit_price,
-    cast(line_discount_pct as decimal(5, 4)) as line_discount_pct,
-    cast(tax_pct as decimal(5, 4)) as tax_pct,
-    cast(ingestion_ts as timestamp) as ingestion_ts
-  from bronze_parquet
-)
-
--- Step 3: Final output
-select * from typed
-WHERE 
- product_id IN (
-    SELECT product_id
-    FROM main_stg.stg_products
-) --cleaned out product ids due to intentdbt ruional anomalies or incorrect product ids. to keep referential integrity","""warehouse"".""main_stg"".""stg_orderslines""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.680430Z', 'completed_at': '2025-10-10T07:10:43.695218Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.695952Z', 'completed_at': '2025-10-10T07:10:43.917118Z'}]",Thread-1 (worker),0.24037623405456543,OK,,model.local_de_assessment.stg_products,True,"
-
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/products/*.parquet')
-),
-
-
--- Step 2: Apply transformations
-typed as (
-select
-    cast(product_id as bigint) as product_id,
-    cast(sku as string) as sku,
-    cast(name as string) as name,
-    cast(category as string) as category,
-    cast(subcategory as string) as subcategory,
-    cast(current_price as numeric(12, 4)) as current_price,
-    cast(currency as string) as currency,
-    cast(is_discontinued as boolean) as is_discontinued,
-    cast(introduced_dt as date) as introduced_dt,
-    cast(discontinued_dt as date) as discontinued_dt,
-    cast(ingestion_ts as timestamp) as ingestion_ts,
-    -- Generate a surrogate key for SCD 2    
-    md5(cast(coalesce(cast(product_id as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(name as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(category as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(subcategory as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(current_price as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(currency as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(is_discontinued as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast(discontinued_dt as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS product_scd_id
-
-from bronze_parquet
-)
-
--- Step 3: Final output
-select * from typed","""warehouse"".""main_stg"".""stg_products""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.935676Z', 'completed_at': '2025-10-10T07:10:43.943417Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.944424Z', 'completed_at': '2025-10-10T07:10:44.052719Z'}]",Thread-1 (worker),0.12561535835266113,OK,,model.local_de_assessment.stg_suppliers,True,"
-
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet')
-),
-
-
--- Step 2: Apply transformations
-typed as (
-select
-    cast(supplier_id as bigint) as supplier_id,
-    cast(supplier_code as string) as supplier_code,
-    cast(name as string) as name,
-    cast(country_code as string) as country_code,
-    cast(lead_time_days as int) as lead_time_days,
-    cast(preffered as boolean) as preferred,
-    cast(ingestion_ts as timestamp) as ingestion_ts,
-      row_number() over (
-        partition by supplier_code
-        order by supplier_id asc  
-      ) as row_num
-
-from bronze_parquet
-)
-
--- Step 3: Final output
-select supplier_id,
-        supplier_code,
-        name,
-        country_code,
-        lead_time_days,
-        preferred,
-        ingestion_ts
-
- from typed where row_num = 1","""warehouse"".""main_stg"".""stg_suppliers""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.920613Z', 'completed_at': '2025-10-10T07:10:43.929298Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.930610Z', 'completed_at': '2025-10-10T07:10:44.058829Z'}]",Thread-2 (worker),0.14201784133911133,OK,,model.local_de_assessment.stg_stores,True,"
+and longitude between -180 and 180","""warehouse"".""main_stg"".""stg_customers""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.405816Z', 'completed_at': '2025-10-15T07:34:18.412923Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.413688Z', 'completed_at': '2025-10-15T07:34:18.609686Z'}]",Thread-3 (worker),0.206939697265625,OK,,model.local_de_assessment.stg_stores,True,"
 
 
 
@@ -512,8 +473,38 @@ select store_id,
  from typed
 where latitude between -90 and 90
 and longitude between -180 and 180 
-and row_num = 1","""warehouse"".""main_stg"".""stg_stores""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.062083Z', 'completed_at': '2025-10-10T07:10:44.075007Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.080254Z', 'completed_at': '2025-10-10T07:10:44.197325Z'}]",Thread-1 (worker),0.13921165466308594,OK,,model.local_de_assessment.silver_audit,True,"
+and row_num = 1","""warehouse"".""main_stg"".""stg_stores""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:17.907048Z', 'completed_at': '2025-10-15T07:34:17.920887Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:17.922837Z', 'completed_at': '2025-10-15T07:34:18.619406Z'}]",Thread-2 (worker),0.7192518711090088,OK,,model.local_de_assessment.stg_orderslines,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/orderslines/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(order_id as bigint) as order_id,
+    cast(line_number as int) as line_number,
+    cast(product_id as bigint) as product_id,
+    cast(qty as int) as qty,
+    cast(unit_price as decimal(12, 4)) as unit_price,
+    cast(line_discount_pct as decimal(5, 4)) as line_discount_pct,
+    cast(tax_pct as decimal(5, 4)) as tax_pct,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed
+WHERE 
+ product_id IN (
+    SELECT product_id
+    FROM main_stg.stg_products
+) --cleaned out product ids due to intentdbt ruional anomalies or incorrect product ids. to keep referential integrity","""warehouse"".""main_stg"".""stg_orderslines""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.643456Z', 'completed_at': '2025-10-15T07:34:18.666271Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.667136Z', 'completed_at': '2025-10-15T07:34:18.781873Z'}]",Thread-2 (worker),0.14481639862060547,OK,,model.local_de_assessment.silver_audit,True,"
 
 with bronze_parquet as (
   select * from ""warehouse"".""main_stg"".""stg_audit""
@@ -540,10 +531,10 @@ typed as (
 select
   status,
   timing,
-  json_extract(timing[0], '$.started_at') as compile_started_at,
-  json_extract(timing[0], '$.completed_at') as compile_completed_at,
-  json_extract(timing[1], '$.started_at') as execute_started_at,
-  json_extract(timing[1], '$.completed_at') as execute_completed_at,
+  json_extract(timing[1], '$.started_at') as compile_started_at,
+  json_extract(timing[1], '$.completed_at') as compile_completed_at,
+  json_extract(timing[2], '$.started_at') as execute_started_at,
+  json_extract(timing[2], '$.completed_at') as execute_completed_at,
   thread_id,
   execution_time,
   message,
@@ -563,8 +554,47 @@ select
   from typed
 
 
-","""warehouse"".""main_silver"".""silver_audit""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.075516Z', 'completed_at': '2025-10-10T07:10:44.124176Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.125219Z', 'completed_at': '2025-10-10T07:10:44.255181Z'}]",Thread-2 (worker),0.1830909252166748,OK,,model.local_de_assessment.silver_events,True,"
+","""warehouse"".""main_silver"".""silver_audit""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.623734Z', 'completed_at': '2025-10-15T07:34:18.631208Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.632817Z', 'completed_at': '2025-10-15T07:34:18.799543Z'}]",Thread-3 (worker),0.187408447265625,OK,,model.local_de_assessment.stg_suppliers,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/suppliers/*.parquet')
+),
+
+
+-- Step 2: Apply transformations
+typed as (
+select
+    cast(supplier_id as bigint) as supplier_id,
+    cast(supplier_code as string) as supplier_code,
+    cast(name as string) as name,
+    cast(country_code as string) as country_code,
+    cast(lead_time_days as int) as lead_time_days,
+    cast(preffered as boolean) as preferred,
+    cast(ingestion_ts as timestamp) as ingestion_ts,
+      row_number() over (
+        partition by supplier_code
+        order by supplier_id asc  
+      ) as row_num
+
+from bronze_parquet
+)
+
+-- Step 3: Final output
+select supplier_id,
+        supplier_code,
+        name,
+        country_code,
+        lead_time_days,
+        preferred,
+        ingestion_ts
+
+ from typed where row_num = 1","""warehouse"".""main_stg"".""stg_suppliers""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.800235Z', 'completed_at': '2025-10-15T07:34:18.812579Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.813562Z', 'completed_at': '2025-10-15T07:34:18.944343Z'}]",Thread-2 (worker),0.15657782554626465,OK,,model.local_de_assessment.silver_events,True,"
 
 SELECT 
     event_id,
@@ -586,8 +616,8 @@ SELECT
     logout_reason,
     ingestion_ts
 FROM ""warehouse"".""main_stg"".""stg_events"" 
-","""warehouse"".""main_silver"".""silver_events""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.262377Z', 'completed_at': '2025-10-10T07:10:44.267737Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.268286Z', 'completed_at': '2025-10-10T07:10:44.362192Z'}]",Thread-2 (worker),0.10319280624389648,OK,,model.local_de_assessment.silver_exchangerates,True,"
+","""warehouse"".""main_silver"".""silver_events""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.825849Z', 'completed_at': '2025-10-15T07:34:18.833641Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.834397Z', 'completed_at': '2025-10-15T07:34:18.969027Z'}]",Thread-3 (worker),0.1541731357574463,OK,,model.local_de_assessment.silver_exchangerates,True,"
 
 SELECT 
     date,
@@ -595,124 +625,8 @@ SELECT
     rate_to_aud,
     ingestion_ts
 FROM ""warehouse"".""main_stg"".""stg_exchangerates"" 
-","""warehouse"".""main_silver"".""silver_exchangerates""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.698112Z', 'completed_at': '2025-10-10T07:10:43.709689Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.710033Z', 'completed_at': '2025-10-10T07:10:44.588975Z'}]",Thread-3 (worker),0.9005308151245117,OK,,model.local_de_assessment.stg_sensors,True,"
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/sensors/*.parquet')
-),
-
--- Step 2: Apply transformations
-typed as (
-  select
-    cast(sensor_ts as timestamp) as sensor_ts,
-    cast(store_id as bigint) as store_id,
-    cast(shelf_id as string) as shelf_id,
-    cast(temperature_c as decimal(5, 2)) as temperature_c,
-    cast(humidity_pct as decimal(5, 2)) as humidity_pct,
-    cast(battery_mv as int) as battery_mv,
-    cast(ingestion_ts as timestamp) as ingestion_ts
-  from bronze_parquet
-)
-
--- Step 3: Final output
-select * from typed
-where sensor_ts is not null
--- moved to curated
---and temperature_c between 0 and 50 
---    and humidity_pct between 0 and 100
---and battery_mv >= 1000
-and 
- store_id IN (
-    SELECT store_id
-    FROM main_stg.stg_stores
-) --cleaned out store ids due to lat/long anomalies to keep referential integrity","""warehouse"".""main_stg"".""stg_sensors""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.210325Z', 'completed_at': '2025-10-10T07:10:44.220165Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.221102Z', 'completed_at': '2025-10-10T07:10:44.589828Z'}]",Thread-1 (worker),0.3831946849822998,OK,,model.local_de_assessment.silver_customers,True,"
-
-SELECT 
-    customer_id,
-       natural_key,
-       first_name,
-       last_name,
-       email,
-       phone,
-       address_line1, 
-       address_line2, 
-       city, 
-       state_region,
-       postcode,
-       country_code,
-       latitude,
-       longitude,
-       birth_date,   
-        datediff('year', birth_date, ingestion_ts) as age,
-       join_ts,
-       is_vip,
-       gdpr_consent,
-       ingestion_ts
-
-
-FROM ""warehouse"".""main_stg"".""stg_customers""
-
-","""warehouse"".""main_silver"".""silver_customers""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:43.757374Z', 'completed_at': '2025-10-10T07:10:43.763387Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:43.763927Z', 'completed_at': '2025-10-10T07:10:45.293121Z'}]",Thread-4 (worker),1.5382659435272217,OK,,model.local_de_assessment.stg_shipments,True,"
-
-
-
-
--- Step 1: Read from external Parquet file
-with bronze_parquet as (
-  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/shipments/*.parquet')
-),
-
--- Step 2: Apply transformations
-typed as (
-    select
-        cast(shipment_id as bigint) as shipment_id,
-        cast(order_id as bigint) as order_id,
-        cast(carrier as string) as carrier,
-        cast(shipped_at as timestamp) as shipped_at,
-        cast(delivered_at as timestamp) as delivered_at,
-        cast(ship_cost as numeric(12, 2)) as ship_cost,
-        cast(ingestion_ts as timestamp) as ingestion_ts
-  from bronze_parquet
-)
-
--- Step 3: Final output
-select * from typed","""warehouse"".""main_stg"".""stg_shipments""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.369135Z', 'completed_at': '2025-10-10T07:10:44.375464Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.376318Z', 'completed_at': '2025-10-10T07:10:45.296759Z'}]",Thread-2 (worker),0.936614990234375,OK,,model.local_de_assessment.silver_returns,True,"
-
-SELECT 
-    return_id,
-      order_id,
-        product_id 
-        ,return_ts
-        ,  qty
-,reason ,
-return_reason_code,
- source_version,
-  ingestion_ts 
-FROM ""warehouse"".""main_stg"".""stg_returns""
-
-","""warehouse"".""main_silver"".""silver_returns""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.324791Z', 'completed_at': '2025-10-10T07:10:45.330587Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.331254Z', 'completed_at': '2025-10-10T07:10:45.432664Z'}]",Thread-2 (worker),0.12401533126831055,OK,,model.local_de_assessment.silver_suppliers,True,"
-
-SELECT 
-    supplier_id,
-        supplier_code,
-        name,
-        country_code,
-        lead_time_days,
-        preferred,
-        ingestion_ts
-
-FROM ""warehouse"".""main_stg"".""stg_suppliers""
-
-","""warehouse"".""main_silver"".""silver_suppliers""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.609568Z', 'completed_at': '2025-10-10T07:10:44.620018Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.620642Z', 'completed_at': '2025-10-10T07:10:45.431459Z'}]",Thread-1 (worker),0.8378617763519287,OK,,model.local_de_assessment.silver_products,True,"
+","""warehouse"".""main_silver"".""silver_exchangerates""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.985968Z', 'completed_at': '2025-10-15T07:34:19.008352Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.009063Z', 'completed_at': '2025-10-15T07:34:19.214186Z'}]",Thread-3 (worker),0.23264241218566895,OK,,model.local_de_assessment.silver_products,True,"
 
 
 WITH source AS (
@@ -775,8 +689,128 @@ expired_records AS (
 
 SELECT * FROM new_records
 UNION ALL
-SELECT * FROM expired_records","""warehouse"".""main_silver"".""silver_products""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.308383Z', 'completed_at': '2025-10-10T07:10:45.314889Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.316531Z', 'completed_at': '2025-10-10T07:10:45.449553Z'}]",Thread-4 (worker),0.14511704444885254,OK,,model.local_de_assessment.dim_supplier,True,"
+SELECT * FROM expired_records","""warehouse"".""main_silver"".""silver_products""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.975395Z', 'completed_at': '2025-10-15T07:34:18.995616Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.996572Z', 'completed_at': '2025-10-15T07:34:19.270680Z'}]",Thread-2 (worker),0.30153965950012207,OK,,model.local_de_assessment.silver_returns,True,"
+
+SELECT 
+    return_id,
+      order_id,
+        product_id 
+        ,return_ts
+        ,  qty
+,reason ,
+return_reason_code,
+ source_version,
+  ingestion_ts 
+FROM ""warehouse"".""main_stg"".""stg_returns""
+
+","""warehouse"".""main_silver"".""silver_returns""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:19.282376Z', 'completed_at': '2025-10-15T07:34:19.291358Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.292464Z', 'completed_at': '2025-10-15T07:34:19.359141Z'}]",Thread-2 (worker),0.08034348487854004,OK,,model.local_de_assessment.silver_stores,True,"
+
+SELECT 
+        store_id,
+        store_code,
+        name,
+        channel,
+        region,
+        state,
+        latitude,
+        longitude,
+        open_dt as open_date,
+        close_dt as close_date,
+        ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_stores""
+
+","""warehouse"".""main_silver"".""silver_stores""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.395839Z', 'completed_at': '2025-10-15T07:34:18.419515Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.428256Z', 'completed_at': '2025-10-15T07:34:19.611177Z'}]",Thread-1 (worker),1.2178468704223633,OK,,model.local_de_assessment.stg_shipments,True,"
+
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/shipments/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+    select
+        cast(shipment_id as bigint) as shipment_id,
+        cast(order_id as bigint) as order_id,
+        cast(carrier as string) as carrier,
+        cast(shipped_at as timestamp) as shipped_at,
+        cast(delivered_at as timestamp) as delivered_at,
+        cast(ship_cost as numeric(12, 2)) as ship_cost,
+        cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed","""warehouse"".""main_stg"".""stg_shipments""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:18.237231Z', 'completed_at': '2025-10-15T07:34:18.246991Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:18.248210Z', 'completed_at': '2025-10-15T07:34:19.775821Z'}]",Thread-4 (worker),1.5456340312957764,OK,,model.local_de_assessment.stg_sensors,True,"
+
+
+
+-- Step 1: Read from external Parquet file
+with bronze_parquet as (
+  select * from read_parquet('../lake/bronze/parquet/retail_bronze_dataset/sensors/*.parquet')
+),
+
+-- Step 2: Apply transformations
+typed as (
+  select
+    cast(sensor_ts as timestamp) as sensor_ts,
+    cast(store_id as bigint) as store_id,
+    cast(shelf_id as string) as shelf_id,
+    cast(temperature_c as decimal(5, 2)) as temperature_c,
+    cast(humidity_pct as decimal(5, 2)) as humidity_pct,
+    cast(battery_mv as int) as battery_mv,
+    cast(ingestion_ts as timestamp) as ingestion_ts
+  from bronze_parquet
+)
+
+-- Step 3: Final output
+select * from typed
+where sensor_ts is not null
+-- moved to curated
+--and temperature_c between 0 and 50 
+--    and humidity_pct between 0 and 100
+--and battery_mv >= 1000
+and 
+ store_id IN (
+    SELECT store_id
+    FROM main_stg.stg_stores
+) --cleaned out store ids due to lat/long anomalies to keep referential integrity","""warehouse"".""main_stg"".""stg_sensors""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:19.223576Z', 'completed_at': '2025-10-15T07:34:19.232646Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.234561Z', 'completed_at': '2025-10-15T07:34:19.783400Z'}]",Thread-3 (worker),0.5642232894897461,OK,,model.local_de_assessment.silver_customers,True,"
+
+SELECT 
+    customer_id,
+       natural_key,
+       first_name,
+       last_name,
+       email,
+       phone,
+       address_line1, 
+       address_line2, 
+       city, 
+       state_region,
+       postcode,
+       country_code,
+       latitude,
+       longitude,
+       birth_date,   
+        datediff('year', birth_date, ingestion_ts) as age,
+       join_ts,
+       is_vip,
+       gdpr_consent,
+       ingestion_ts
+
+
+FROM ""warehouse"".""main_stg"".""stg_customers""
+
+","""warehouse"".""main_silver"".""silver_customers""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:19.804961Z', 'completed_at': '2025-10-15T07:34:19.812469Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.813239Z', 'completed_at': '2025-10-15T07:34:20.032654Z'}]",Thread-3 (worker),0.24068331718444824,OK,,model.local_de_assessment.dim_supplier,True,"
 
 WITH silver AS (
     -- Reference your Silver layer model
@@ -821,8 +855,8 @@ END AS supplier_tier
 SELECT 
     md5(cast(coalesce(cast(supplier_id as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS supplier_sk,
     * 
-FROM enhanced","""warehouse"".""main_gold"".""dim_supplier""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:44.600355Z', 'completed_at': '2025-10-10T07:10:44.613808Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:44.614505Z', 'completed_at': '2025-10-10T07:10:45.470504Z'}]",Thread-3 (worker),0.8830766677856445,OK,,model.local_de_assessment.silver_orderslines,True,"
+FROM enhanced","""warehouse"".""main_gold"".""dim_supplier""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:19.646348Z', 'completed_at': '2025-10-15T07:34:19.657894Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.659059Z', 'completed_at': '2025-10-15T07:34:20.164481Z'}]",Thread-1 (worker),0.5290207862854004,OK,,model.local_de_assessment.silver_orderslines,True,"
 
 SELECT 
     order_id,
@@ -836,68 +870,22 @@ SELECT
 
 FROM ""warehouse"".""main_stg"".""stg_orderslines"" 
 
-","""warehouse"".""main_silver"".""silver_orderslines""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.494204Z', 'completed_at': '2025-10-10T07:10:45.502862Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.504271Z', 'completed_at': '2025-10-10T07:10:45.594904Z'}]",Thread-3 (worker),0.10601067543029785,OK,,model.local_de_assessment.invalid_store_ids,True,"select store_id
-from ""warehouse"".""main_stg"".""stg_sensors""
-where store_id not in (
-  select store_id from ""warehouse"".""main_stg"".""stg_stores""
-)
-group by store_id","""warehouse"".""main"".""invalid_store_ids""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.477650Z', 'completed_at': '2025-10-10T07:10:45.484364Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.485445Z', 'completed_at': '2025-10-10T07:10:45.610640Z'}]",Thread-4 (worker),0.14114952087402344,OK,,model.local_de_assessment.fct_ingestion_audit,True,"
+","""warehouse"".""main_silver"".""silver_orderslines""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:20.059168Z', 'completed_at': '2025-10-15T07:34:20.077123Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:20.078988Z', 'completed_at': '2025-10-15T07:34:20.179395Z'}]",Thread-3 (worker),0.12755608558654785,OK,,model.local_de_assessment.silver_suppliers,True,"
 
 SELECT 
-
-  status,
-  timing,
- compile_started_at,
-  compile_completed_at,
-   execute_started_at,
-  execute_completed_at,
-  thread_id,
-  execution_time,
-  message,
-  failures,
-  unique_id,
-  compiled,
-  compiled_code,
-  relation_name,
-   database,
-   schema,
-  table_name,
-  batch_results,
-  adapter_response_message,
-  ingestion_ts,
- audit_id
- 
-    -- Pipeline Health Metrics
- --  try_cast(json_extract(batch_results, '$.rows_processed') as int) as rows_processed,
-  --  execution_time as processing_time_seconds,
- --   try_cast(json_extract(adapter_response_message, '$.file_size_bytes') as int) as file_size_bytes
---
-
-
-FROM ""warehouse"".""main_silver"".""silver_audit""
-
-","""warehouse"".""main_gold"".""fct_ingestion_audit""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.453065Z', 'completed_at': '2025-10-10T07:10:45.464295Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.465451Z', 'completed_at': '2025-10-10T07:10:45.570835Z'}]",Thread-2 (worker),0.12718677520751953,OK,,model.local_de_assessment.silver_stores,True,"
-
-SELECT 
-        store_id,
-        store_code,
+    supplier_id,
+        supplier_code,
         name,
-        channel,
-        region,
-        state,
-        latitude,
-        longitude,
-        open_dt as open_date,
-        close_dt as close_date,
+        country_code,
+        lead_time_days,
+        preferred,
         ingestion_ts
 
-FROM ""warehouse"".""main_stg"".""stg_stores""
+FROM ""warehouse"".""main_stg"".""stg_suppliers""
 
-","""warehouse"".""main_silver"".""silver_stores""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:45.460678Z', 'completed_at': '2025-10-10T07:10:45.471114Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:45.473213Z', 'completed_at': '2025-10-10T07:10:46.712705Z'}]",Thread-1 (worker),1.2561531066894531,OK,,model.local_de_assessment.stg_ordersheader,True,"
+","""warehouse"".""main_silver"".""silver_suppliers""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:19.371543Z', 'completed_at': '2025-10-15T07:34:19.387161Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.393659Z', 'completed_at': '2025-10-15T07:34:22.080863Z'}]",Thread-2 (worker),2.7111198902130127,OK,,model.local_de_assessment.stg_ordersheader,True,"
 
 
 
@@ -956,56 +944,52 @@ and exists (
     from ""warehouse"".""main_stg"".""stg_stores"" s
     where t.store_id = s.store_id
 )
-and row_num = 1","""warehouse"".""main_stg"".""stg_ordersheader""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.305270Z', 'completed_at': '2025-10-10T07:10:47.321306Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.324317Z', 'completed_at': '2025-10-10T07:10:47.394417Z'}]",Thread-1 (worker),0.09742903709411621,OK,,model.local_de_assessment.dim_product_scd,True,"
+and row_num = 1","""warehouse"".""main_stg"".""stg_ordersheader""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:19.796412Z', 'completed_at': '2025-10-15T07:34:19.819375Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:19.820046Z', 'completed_at': '2025-10-15T07:34:20.030312Z'}]",Thread-4 (worker),0.24406671524047852,OK,,model.local_de_assessment.fct_ingestion_audit,True,"
 
-WITH silver AS (
-    -- Reference your Silver layer model
-    SELECT     
-    product_scd_id,
-    product_id,
-    sku,
-    name,
-    category,
-    subcategory,
-    current_price,
-    currency,
-    is_discontinued,
-    introduced_dt,
-    discontinued_dt,
-    effective_from,
-    effective_to,
-    is_current
-         FROM ""warehouse"".""main_silver"".""silver_products"" s
-
-),
-enhanced AS (
-    SELECT
-    product_scd_id,
-    product_id,
-    sku,
-    name,
-    category,
-    subcategory,
-    current_price,
-    currency,
-    is_discontinued,
-    introduced_dt as introduced_date,
-    discontinued_dt as discontinued_date,
-    effective_from as effective_from_date,
-    effective_to as effective_to_date, 
-    is_current,
-    CASE 
-      WHEN current_price != LAG(current_price) OVER (PARTITION BY product_id ORDER BY effective_from)
-      THEN TRUE ELSE FALSE
-    END AS is_price_change
-
-    FROM silver
-)
 SELECT 
-    * 
-FROM enhanced","""warehouse"".""main_gold"".""dim_product_scd""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.399654Z', 'completed_at': '2025-10-10T07:10:47.406079Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.406646Z', 'completed_at': '2025-10-10T07:10:47.456825Z'}]",Thread-1 (worker),0.05866360664367676,OK,,model.local_de_assessment.dim_store,True,"
+
+  status,
+  timing,
+
+CAST(json_extract(timing[1], '$.started_at') AS TIMESTAMP) AS compile_started_at,
+CAST(json_extract(timing[1], '$.completed_at') AS TIMESTAMP) AS compile_completed_at,
+CAST(json_extract(timing[2], '$.started_at') AS TIMESTAMP) AS execute_started_at,
+CAST(json_extract(timing[2], '$.completed_at') AS TIMESTAMP) AS execute_completed_at,
+
+  thread_id,
+  execution_time,
+  message,
+  failures,
+  unique_id,
+  compiled,
+  compiled_code,
+  relation_name,
+  split_part(relation_name, '.', 1) as database,
+  split_part(relation_name, '.', 2) as schema,
+  split_part(relation_name, '.', 3) as table_name,
+  batch_results,
+  adapter_response_message,
+  ingestion_ts,
+ audit_id
+ 
+    -- Pipeline Health Metrics
+ --  try_cast(json_extract(batch_results, '$.rows_processed') as int) as rows_processed,
+  --  execution_time as processing_time_seconds,
+ --   try_cast(json_extract(adapter_response_message, '$.file_size_bytes') as int) as file_size_bytes
+--
+
+
+FROM ""warehouse"".""main_silver"".""silver_audit""
+
+","""warehouse"".""main_gold"".""fct_ingestion_audit""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.138644Z', 'completed_at': '2025-10-15T07:34:22.150081Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.153120Z', 'completed_at': '2025-10-15T07:34:22.201997Z'}]",Thread-4 (worker),0.06840276718139648,OK,,model.local_de_assessment.invalid_store_ids,True,"select store_id
+from ""warehouse"".""main_stg"".""stg_sensors""
+where store_id not in (
+  select store_id from ""warehouse"".""main_stg"".""stg_stores""
+)
+group by store_id","""warehouse"".""main"".""invalid_store_ids""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.131545Z', 'completed_at': '2025-10-15T07:34:22.141769Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.145579Z', 'completed_at': '2025-10-15T07:34:22.256157Z'}]",Thread-3 (worker),0.13531804084777832,OK,,model.local_de_assessment.dim_store,True,"
 
 WITH silver AS (
     -- Reference your Silver layer model
@@ -1059,8 +1043,56 @@ enhanced AS (
 SELECT 
     md5(cast(coalesce(cast(store_id as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS store_sk,
     * 
-FROM enhanced","""warehouse"".""main_gold"".""dim_store""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.293955Z', 'completed_at': '2025-10-10T07:10:47.311124Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.311751Z', 'completed_at': '2025-10-10T07:10:47.635618Z'}]",Thread-3 (worker),0.3499727249145508,OK,,model.local_de_assessment.silver_sensors,True,"
+FROM enhanced","""warehouse"".""main_gold"".""dim_store""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.124805Z', 'completed_at': '2025-10-15T07:34:22.141184Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.142383Z', 'completed_at': '2025-10-15T07:34:22.292460Z'}]",Thread-1 (worker),0.17391037940979004,OK,,model.local_de_assessment.dim_product_scd,True,"
+
+WITH silver AS (
+    -- Reference your Silver layer model
+    SELECT     
+    product_scd_id,
+    product_id,
+    sku,
+    name,
+    category,
+    subcategory,
+    current_price,
+    currency,
+    is_discontinued,
+    introduced_dt,
+    discontinued_dt,
+    effective_from,
+    effective_to,
+    is_current
+         FROM ""warehouse"".""main_silver"".""silver_products"" s
+
+),
+enhanced AS (
+    SELECT
+    product_scd_id,
+    product_id,
+    sku,
+    name,
+    category,
+    subcategory,
+    current_price,
+    currency,
+    is_discontinued,
+    introduced_dt as introduced_date,
+    discontinued_dt as discontinued_date,
+    effective_from as effective_from_date,
+    effective_to as effective_to_date, 
+    is_current,
+    CASE 
+      WHEN current_price != LAG(current_price) OVER (PARTITION BY product_id ORDER BY effective_from)
+      THEN TRUE ELSE FALSE
+    END AS is_price_change
+
+    FROM silver
+)
+SELECT 
+    * 
+FROM enhanced","""warehouse"".""main_gold"".""dim_product_scd""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.212308Z', 'completed_at': '2025-10-15T07:34:22.223479Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.224758Z', 'completed_at': '2025-10-15T07:34:22.595151Z'}]",Thread-4 (worker),0.3902885913848877,OK,,model.local_de_assessment.silver_sensors,True,"
 
 SELECT 
     sensor_ts,
@@ -1073,22 +1105,8 @@ SELECT
 
 FROM ""warehouse"".""main_stg"".""stg_sensors""
 
-","""warehouse"".""main_silver"".""silver_sensors""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.301939Z', 'completed_at': '2025-10-10T07:10:47.320985Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.321971Z', 'completed_at': '2025-10-10T07:10:47.637654Z'}]",Thread-2 (worker),0.3475790023803711,OK,,model.local_de_assessment.silver_shipments,True,"
-
-SELECT 
-        shipment_id,
-        order_id,
-        carrier,
-        shipped_at,
-        delivered_at,
-        ship_cost,
-        ingestion_ts
-
-FROM ""warehouse"".""main_stg"".""stg_shipments""
-
-","""warehouse"".""main_silver"".""silver_shipments""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.298498Z', 'completed_at': '2025-10-10T07:10:47.317665Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.318485Z', 'completed_at': '2025-10-10T07:10:47.682599Z'}]",Thread-4 (worker),0.3915235996246338,OK,,model.local_de_assessment.dim_customer,True,"
+","""warehouse"".""main_silver"".""silver_sensors""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.265710Z', 'completed_at': '2025-10-15T07:34:22.272797Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.273588Z', 'completed_at': '2025-10-15T07:34:22.680110Z'}]",Thread-3 (worker),0.41925573348999023,OK,,model.local_de_assessment.dim_customer,True,"
 
 WITH silver AS (
     -- Reference your Silver layer model
@@ -1148,6 +1166,15 @@ enhanced AS (
        birth_date,  
         EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) AS customer_age,
         CURRENT_DATE - CAST(join_ts AS Date) AS customer_lifetime_days, 
+        
+    CASE
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) < 18 THEN 'Underage'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) BETWEEN 18 AND 24 THEN 'Youth'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) BETWEEN 25 AND 44 THEN 'Adult'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) BETWEEN 45 AND 64 THEN 'Middle-aged'
+        ELSE 'Senior'
+    END AS age_demographic,
+
        join_ts,
        is_vip,
        gdpr_consent,
@@ -1164,8 +1191,22 @@ enhanced AS (
 SELECT 
     md5(cast(coalesce(cast(customer_id as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) AS customer_sk,
     * 
-FROM enhanced","""warehouse"".""main_gold"".""dim_customer""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.648021Z', 'completed_at': '2025-10-10T07:10:47.658290Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.659261Z', 'completed_at': '2025-10-10T07:10:48.072317Z'}]",Thread-3 (worker),0.4274580478668213,OK,,model.local_de_assessment.silver_orders,True,"
+FROM enhanced","""warehouse"".""main_gold"".""dim_customer""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.134940Z', 'completed_at': '2025-10-15T07:34:22.149457Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.150591Z', 'completed_at': '2025-10-15T07:34:22.758530Z'}]",Thread-2 (worker),0.6378381252288818,OK,,model.local_de_assessment.silver_shipments,True,"
+
+SELECT 
+        shipment_id,
+        order_id,
+        carrier,
+        shipped_at,
+        delivered_at,
+        ship_cost,
+        ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_shipments""
+
+","""warehouse"".""main_silver"".""silver_shipments""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.602237Z', 'completed_at': '2025-10-15T07:34:22.610636Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.611586Z', 'completed_at': '2025-10-15T07:34:23.165004Z'}]",Thread-4 (worker),0.566213846206665,OK,,model.local_de_assessment.silver_orders,True,"
 
 SELECT 
     order_id,
@@ -1180,8 +1221,13 @@ SELECT
     currency,
     ingestion_ts
 FROM ""warehouse"".""main_stg"".""stg_ordersheader"" 
-","""warehouse"".""main_silver"".""silver_orders""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:48.079478Z', 'completed_at': '2025-10-10T07:10:48.091984Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:48.092626Z', 'completed_at': '2025-10-10T07:10:48.177534Z'}]",Thread-4 (worker),0.10214853286743164,OK,,model.local_de_assessment.fct_returns,True,"
+","""warehouse"".""main_silver"".""silver_orders""",,OK,2025-10-15 07:34:29.382228
+error,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:23.177226Z', 'completed_at': '2025-10-15T07:34:23.197933Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:23.198536Z', 'completed_at': '2025-10-15T07:34:23.226415Z'}]",Thread-2 (worker),0.07535219192504883,"Runtime Error in model fct_returns (models\gold\fct_returns.sql)
+  Binder Error: Referenced column ""ingestion_ts"" not found in FROM clause!
+  Candidate bindings: ""return_qty"", ""return_reason"", ""return_date"", ""return_ts"", ""source_version""
+  
+  LINE 14:   SELECT MAX(ingestion_ts) AS max_ingestion_ts
+                        ^",,model.local_de_assessment.fct_returns,True,"
 
 WITH latest_ingestion AS (
   SELECT MAX(ingestion_ts) AS max_ingestion_ts
@@ -1198,7 +1244,8 @@ returns_filtered AS (
     r.reason AS return_reason,
     r.return_reason_code,
     r.source_version,
-    r.ingestion_ts
+     CAST(r.return_ts AS DATE) AS return_date,
+     ingestion_ts
   FROM ""warehouse"".""main_silver"".""silver_returns"" r
   JOIN ""warehouse"".""main_gold"".""dim_product_scd"" p 
        ON r.product_id = p.product_id 
@@ -1207,85 +1254,18 @@ returns_filtered AS (
   
 )
 
-SELECT * FROM returns_filtered","""warehouse"".""main_gold"".""fct_returns""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:48.085080Z', 'completed_at': '2025-10-10T07:10:48.095843Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:48.099670Z', 'completed_at': '2025-10-10T07:10:48.219913Z'}]",Thread-3 (worker),0.14384889602661133,OK,,model.local_de_assessment.fct_sales,True,"
-
-WITH sales_enriched AS (
-  SELECT 
-    ol.order_id || '-' || ol.line_number AS sale_id,
-    ol.order_id,
-    ol.line_number,
-    oh.order_ts,
-    oh.order_date,
-    oh.customer_id,
-    ol.product_id,
-    p.currency AS product_currency,
-    qty,
-    ROUND(ol.unit_price, 2)  as unit_price,
-    ROUND(er.rate_to_aud, 2) AS rate_to_aud,
-    --  actual percentages
-    ROUND(100 * ol.line_discount_pct, 2) AS line_discount_pct,
-    ROUND(100 * ol.tax_pct, 2) AS tax_pct,
-
-    -- Order metadata
-    oh.store_id,
-    oh.channel,
-    oh.payment_method,
-    oh.coupon_code,
-    ROUND(oh.shipping_fee, 2) AS shipping_fee_aud,
-    oh.currency AS order_currency,
-    oh.ingestion_ts AS ingestion_ts
-  FROM ""warehouse"".""main_silver"".""silver_orderslines"" ol
-  JOIN ""warehouse"".""main_silver"".""silver_orders"" oh 
-       ON oh.order_id = ol.order_id
-  JOIN ""warehouse"".""main_silver"".""silver_products"" p 
-       ON ol.product_id = p.product_id 
-  JOIN ""warehouse"".""main_silver"".""silver_exchangerates"" er
-       ON oh.order_date = er.date AND p.currency = er.currency
-  
-
-)
-
-
-SELECT 
-  sale_id,
-  order_id,
-  line_number,
-  order_ts,
-  line_number,
-  order_date,
-  customer_id,
-  product_id,
-  product_currency,
-  qty,
-  unit_price,
-  line_discount_pct,
-  tax_pct,
-  rate_to_aud,
-ROUND(CAST(qty * unit_price AS DECIMAL(38, 2)), 2) AS gross_amount,
-ROUND(CAST(qty * unit_price * rate_to_aud AS DECIMAL(38, 2)), 2) AS gross_amount_aud,
-ROUND(CAST(qty * unit_price * (1 - line_discount_pct / 100) * (1 + tax_pct / 100) AS DECIMAL(38, 2)), 2) AS total_amount,
-ROUND(CAST(qty * unit_price * rate_to_aud * (1 - line_discount_pct / 100) * (1 + tax_pct / 100) AS DECIMAL(38, 2)), 2) AS total_amount_aud,
-  store_id,
-  channel,
-  payment_method,
-  coupon_code,
-  shipping_fee_aud,
-  order_currency,
-  ingestion_ts
-
-FROM sales_enriched","""warehouse"".""main_gold"".""fct_sales""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:48.188583Z', 'completed_at': '2025-10-10T07:10:48.195264Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:48.195812Z', 'completed_at': '2025-10-10T07:10:48.737262Z'}]",Thread-4 (worker),0.5530974864959717,OK,,model.local_de_assessment.fct_shipments,True,"
+SELECT * FROM returns_filtered","""warehouse"".""main_gold"".""fct_returns""",,,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:23.260173Z', 'completed_at': '2025-10-15T07:34:23.271256Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:23.272224Z', 'completed_at': '2025-10-15T07:34:23.850718Z'}]",Thread-2 (worker),0.5945661067962646,OK,,model.local_de_assessment.fct_shipments,True,"
 
 SELECT 
         s.shipment_id,
         s.order_id,
         s.carrier,
         o.shipping_fee,
-        s.shipped_at,
-        s.delivered_at,
+        CAST(s.shipped_at AS DATE) AS shipped_date,
+        CAST(s.delivered_at AS DATE) AS delivered_date,
         s.ship_cost as shipping_cost,
-        s.ingestion_ts,
+ --       s.ingestion_ts,
         
   -- Calculate delivery days only if delivered
   CASE 
@@ -1298,14 +1278,45 @@ SELECT
  -- Flag late deliveries based on SLA (e.g., 5 days)
   CASE 
     WHEN s.delivered_at IS NOT NULL AND s.delivered_at <= s.shipped_at + INTERVAL '5 days' THEN TRUE
+    WHEN s.delivered_at IS NULL AND s.ingestion_ts > s.shipped_at + INTERVAL '5 days' THEN TRUE
     ELSE FALSE
   END AS on_time_flag
 
 FROM ""warehouse"".""main_silver"".""silver_shipments"" s
 JOIN ""warehouse"".""main_silver"".""silver_orders"" o
 on s.order_id = o.order_id
-","""warehouse"".""main_gold"".""fct_shipments""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.652840Z', 'completed_at': '2025-10-10T07:10:47.662993Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.666542Z', 'completed_at': '2025-10-10T07:10:48.874506Z'}]",Thread-2 (worker),1.2295265197753906,OK,,model.local_de_assessment.fct_sensor_readings,True,"
+","""warehouse"".""main_gold"".""fct_shipments""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.305242Z', 'completed_at': '2025-10-15T07:34:22.314436Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.315325Z', 'completed_at': '2025-10-15T07:34:24.359800Z'}]",Thread-1 (worker),2.0594170093536377,OK,,model.local_de_assessment.silver_fct_sales,True,"
+
+SELECT 
+    -- From ordersheader
+    oh.order_id,
+    oh.order_ts,
+    oh.order_dt_local AS order_dt,
+    oh.customer_id,
+    oh.store_id,
+    oh.channel,
+    oh.payment_method,
+    oh.coupon_code,
+    oh.shipping_fee,
+    oh.currency,
+    oh.ingestion_ts AS header_ingestion_ts,
+
+    -- From orderslines
+    ol.line_number,
+    ol.product_id,
+    ol.qty,
+    ol.unit_price,
+    ol.line_discount_pct,
+    ol.tax_pct,
+    ol.ingestion_ts AS line_ingestion_ts
+
+FROM ""warehouse"".""main_stg"".""stg_ordersheader"" oh
+JOIN ""warehouse"".""main_stg"".""stg_orderslines"" ol 
+  ON oh.order_id = ol.order_id
+
+","""warehouse"".""main_silver"".""silver_fct_sales""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:22.694132Z', 'completed_at': '2025-10-15T07:34:22.706194Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:22.706770Z', 'completed_at': '2025-10-15T07:34:24.499348Z'}]",Thread-3 (worker),1.8092505931854248,OK,,model.local_de_assessment.fct_sensor_readings,True,"
 
 WITH base AS (
     SELECT 
@@ -1375,34 +1386,71 @@ final AS (
     
 )
 
-SELECT * FROM final","""warehouse"".""main_gold"".""fct_sensor_readings""",,OK,2025-10-10 07:11:07.490323
-success,"[{'name': 'compile', 'started_at': '2025-10-10T07:10:47.461361Z', 'completed_at': '2025-10-10T07:10:47.470456Z'}, {'name': 'execute', 'started_at': '2025-10-10T07:10:47.470940Z', 'completed_at': '2025-10-10T07:10:48.956626Z'}]",Thread-1 (worker),1.4986896514892578,OK,,model.local_de_assessment.silver_fct_sales,True,"
+SELECT * FROM final","""warehouse"".""main_gold"".""fct_sensor_readings""",,OK,2025-10-15 07:34:29.382228
+success,"[{'name': 'compile', 'started_at': '2025-10-15T07:34:23.185077Z', 'completed_at': '2025-10-15T07:34:23.202087Z'}, {'name': 'execute', 'started_at': '2025-10-15T07:34:23.204898Z', 'completed_at': '2025-10-15T07:34:25.317526Z'}]",Thread-4 (worker),2.143876552581787,OK,,model.local_de_assessment.fct_sales,True,"
 
-SELECT 
-    -- From ordersheader
-    oh.order_id,
+WITH sales_enriched AS (
+  SELECT 
+    ol.order_id || '-' || ol.line_number AS sale_id,
+    ol.order_id,
+    ol.line_number,
     oh.order_ts,
-    oh.order_dt_local AS order_dt,
+    oh.order_date,
     oh.customer_id,
+    ol.product_id,
+    p.currency AS product_currency,
+    qty,
+    ROUND(ol.unit_price, 2)  as unit_price,
+    ROUND(er.rate_to_aud, 2) AS rate_to_aud,
+    --  actual percentages
+    ROUND(100 * ol.line_discount_pct, 2) AS line_discount_pct,
+    ROUND(100 * ol.tax_pct, 2) AS tax_pct,
+
+    -- Order metadata
     oh.store_id,
     oh.channel,
     oh.payment_method,
     oh.coupon_code,
-    oh.shipping_fee,
-    oh.currency,
-    oh.ingestion_ts AS header_ingestion_ts,
+    ROUND(oh.shipping_fee, 2) AS shipping_fee_aud,
+    oh.currency AS order_currency,
+    oh.ingestion_ts AS ingestion_ts
+  FROM ""warehouse"".""main_silver"".""silver_orderslines"" ol
+  JOIN ""warehouse"".""main_silver"".""silver_orders"" oh 
+       ON oh.order_id = ol.order_id
+  JOIN ""warehouse"".""main_silver"".""silver_products"" p 
+       ON ol.product_id = p.product_id 
+  JOIN ""warehouse"".""main_silver"".""silver_exchangerates"" er
+       ON oh.order_date = er.date AND p.currency = er.currency
+  
 
-    -- From orderslines
-    ol.line_number,
-    ol.product_id,
-    ol.qty,
-    ol.unit_price,
-    ol.line_discount_pct,
-    ol.tax_pct,
-    ol.ingestion_ts AS line_ingestion_ts
+)
 
-FROM ""warehouse"".""main_stg"".""stg_ordersheader"" oh
-JOIN ""warehouse"".""main_stg"".""stg_orderslines"" ol 
-  ON oh.order_id = ol.order_id
 
-","""warehouse"".""main_silver"".""silver_fct_sales""",,OK,2025-10-10 07:11:07.490323
+SELECT 
+  sale_id,
+  order_id,
+  line_number,
+  order_ts,
+  line_number,
+  order_date,
+  customer_id,
+  product_id,
+  product_currency,
+  qty,
+  unit_price,
+  line_discount_pct,
+  tax_pct,
+  rate_to_aud,
+ROUND(CAST(qty * unit_price AS DECIMAL(38, 2)), 2) AS gross_amount,
+ROUND(CAST(qty * unit_price * rate_to_aud AS DECIMAL(38, 2)), 2) AS gross_amount_aud,
+ROUND(CAST(qty * unit_price * (1 - line_discount_pct / 100) * (1 + tax_pct / 100) AS DECIMAL(38, 2)), 2) AS total_amount,
+ROUND(CAST(qty * unit_price * rate_to_aud * (1 - line_discount_pct / 100) * (1 + tax_pct / 100) AS DECIMAL(38, 2)), 2) AS total_amount_aud,
+  store_id,
+  channel,
+  payment_method,
+  coupon_code,
+  shipping_fee_aud,
+  order_currency,
+  ingestion_ts
+
+FROM sales_enriched","""warehouse"".""main_gold"".""fct_sales""",,OK,2025-10-15 07:34:29.382228

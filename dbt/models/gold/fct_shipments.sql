@@ -11,10 +11,10 @@ SELECT
         s.order_id,
         s.carrier,
         o.shipping_fee,
-        s.shipped_at,
-        s.delivered_at,
+        CAST(s.shipped_at AS DATE) AS shipped_date,
+        CAST(s.delivered_at AS DATE) AS delivered_date,
         s.ship_cost as shipping_cost,
-        s.ingestion_ts,
+ --       s.ingestion_ts,
         
   -- Calculate delivery days only if delivered
   CASE 
@@ -27,6 +27,7 @@ SELECT
  -- Flag late deliveries based on SLA (e.g., 5 days)
   CASE 
     WHEN s.delivered_at IS NOT NULL AND s.delivered_at <= s.shipped_at + INTERVAL '5 days' THEN TRUE
+    WHEN s.delivered_at IS NULL AND s.ingestion_ts > s.shipped_at + INTERVAL '5 days' THEN TRUE
     ELSE FALSE
   END AS on_time_flag
 
