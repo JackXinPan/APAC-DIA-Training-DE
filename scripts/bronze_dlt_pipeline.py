@@ -252,16 +252,16 @@ def retail_source(raw_path: str = "data_raw"):
             yield record         
     @dlt.resource(#returns_v1 # this is technically a decorator that will tell where to append the data after the data load but the transformer decorator dictates naming of the desitnation table
         write_disposition="append"
-        ,columns=pyarrow_schema_to_dlt_columns(returns_day1_schema)
+       # ,columns=pyarrow_schema_to_dlt_columns(returns_day1_schema) # mutually exclusive with evolution?
         ,
         schema_contract={
-            "data_type": "evolve",  # Allow schema evolution
-            "columns": "complete"   # But require all defined columns
+            "tables": "evolve",  # Allow schema evolution
+            "columns": "freeze"   # But require all defined columns
             }
     )
     
     def load_returns_combined():
-        print("Loading resource: Retunrns")
+        print("Loading resource: Returns")
         yield from read_returns_v1()
         yield from read_returns_v2()
 
