@@ -1,4 +1,4 @@
-{% set src_table = 'returnsall' %}
+{% set src_table = 'returnscombined' %}
 
 {% set lake_root = var('lake_root') %}
 
