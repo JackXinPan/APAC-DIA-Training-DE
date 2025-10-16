@@ -11,7 +11,7 @@ WITH source AS (
   SELECT 
     product_id,
     sku,
-    name,
+    REGEXP_REPLACE(name, '^.*\s', '') AS name, --product names have absurd pre-fixes I want to trim out
     category,
     subcategory,
     current_price,
