@@ -3,35 +3,73 @@ version: 2
 
 models:
   - name: stg_returns
-    description: "Staging model for returns"
+    description: "Staging model for product returns"
     columns:
       - name: return_id
         data_type: bigint
         description: "Unique return identifier"
-        tests: 
+        tests:
           - not_null
           - unique
+
       - name: order_id
         data_type: bigint
-        description: "Associated order identifier"
-      - name: customer_id
+        description: "Associated order ID"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_ordersheader')
+              field: order_id
+          - foreign_key_violation_rate:
+              parent_model: ref('stg_ordersheader')
+              parent_key: order_id
+
+      - name: product_id
         data_type: bigint
-        description: "Customer identifier"
-      - name: return_reason
+        description: "Returned product ID"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+          - foreign_key_violation_rate:
+              parent_model: ref('stg_products')
+              parent_key: product_id
+
+      - name: return_ts
+        data_type: timestamp
+        description: "Timestamp of the return"
+        tests:
+          - not_null
+
+      - name: qty
+        data_type: int
+        description: "Quantity returned"
+        tests:
+          - not_null
+
+      - name: reason
         data_type: string
         description: "Reason for return"
-      - name: return_date
-        data_type: date
-        description: "Date of return"
-      - name: refund_amount
-        data_type: decimal
-        description: "Amount refunded to customer"
-      - name: status
-        data_type: string
-        description: "Return status"
+
       - name: source_version
         data_type: string
-        description: "Version of the source data"
+        description: "Source system version"
+
       - name: ingestion_ts
         data_type: timestamp
         description: "Ingestion timestamp"
+        tests:
+          - not_null
+
+      - name: _dlt_load_id
+        data_type: string
+        description: "DLT load identifier"
+
+      - name: _dlt_id
+        data_type: string
+        description: "DLT record identifier"
+
+      - name: return_reason_code
+        data_type: string
+        description: "Standardized return reason code"

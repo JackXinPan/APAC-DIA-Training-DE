@@ -24,7 +24,7 @@ SELECT
     CAST(is_discontinued AS BOOLEAN) AS is_discontinued,
     CAST(introduced_dt AS DATE) AS introduced_dt,
     CAST(discontinued_dt AS DATE) AS discontinued_dt,
-    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts,
 
 
     -- Generate a surrogate key for SCD 2    

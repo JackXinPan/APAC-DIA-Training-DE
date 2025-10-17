@@ -23,7 +23,7 @@ SELECT
     CAST(TRIM(coupon_code) AS VARCHAR) AS coupon_code,
     CAST(shipping_fee AS DECIMAL(12, 2)) AS shipping_fee,
     CAST(TRIM(currency) AS VARCHAR) AS currency,
-    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts,
 
  --deduplicate based on order_id, keeping the latest order_ts
         row_number() over (
