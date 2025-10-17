@@ -1,6 +1,6 @@
 
 {% set src_table = 'sensors' %}
-{{ config(materialized='table', contract={'enforced': true}) }}
+{{ config(materialized='view', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file
@@ -11,13 +11,17 @@ with bronze_parquet as (
 -- Step 2: Apply transformations
 typed as (
   select
-    cast(sensor_ts as timestamp) as sensor_ts,
-    cast(store_id as bigint) as store_id,
-    cast(shelf_id as string) as shelf_id,
-    cast(temperature_c as decimal(5, 2)) as temperature_c,
-    cast(humidity_pct as decimal(5, 2)) as humidity_pct,
-    cast(battery_mv as int) as battery_mv,
-    cast(ingestion_ts as timestamp) as ingestion_ts
+
+
+    CAST(sensor_ts AS TIMESTAMP) AS sensor_ts,
+    CAST(store_id AS BIGINT) AS store_id,
+    CAST(TRIM(shelf_id) AS STRING) AS shelf_id,
+    CAST(temperature_c AS DECIMAL(5, 2)) AS temperature_c,
+    CAST(humidity_pct AS DECIMAL(5, 2)) AS humidity_pct,
+    CAST(battery_mv AS INT) AS battery_mv,
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts
+
+
   from bronze_parquet
 )
 

@@ -1,5 +1,5 @@
 {% set src_table = 'orderslines' %}
-{{ config(materialized='table', contract={'enforced': true}) }}
+{{ config(materialized='view', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file

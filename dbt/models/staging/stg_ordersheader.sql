@@ -1,6 +1,6 @@
 {% set src_table = 'ordersheader' %}
 
-{{ config(materialized='table', contract={'enforced': true}) }}
+{{ config(materialized='view', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file
@@ -11,18 +11,20 @@ with bronze_parquet as (
 -- Step 2: Apply transformations
 typed as (
 
-  select
-    cast(order_id as bigint) as order_id,
-    cast(order_ts as timestamp) as order_ts,
-    cast(order_dt_local as date) as order_dt_local,
-    cast(customer_id as bigint) as customer_id,
-    cast(store_id as bigint) as store_id,
-    cast(channel as varchar) as channel,
-    cast(payment_method as varchar) as payment_method,
-    cast(coupon_code as varchar) as coupon_code,
-    cast(shipping_fee as decimal(12, 2)) as shipping_fee,
-    cast(currency as varchar) as currency,
-    cast(ingestion_ts as timestamp) as ingestion_ts,
+
+SELECT
+    CAST(order_id AS BIGINT) AS order_id,
+    CAST(order_ts AS TIMESTAMP) AS order_ts,
+    CAST(order_dt_local AS DATE) AS order_dt_local,
+    CAST(customer_id AS BIGINT) AS customer_id,
+    CAST(store_id AS BIGINT) AS store_id,
+    CAST(TRIM(channel) AS VARCHAR) AS channel,
+    CAST(TRIM(payment_method) AS VARCHAR) AS payment_method,
+    CAST(TRIM(coupon_code) AS VARCHAR) AS coupon_code,
+    CAST(shipping_fee AS DECIMAL(12, 2)) AS shipping_fee,
+    CAST(TRIM(currency) AS VARCHAR) AS currency,
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts
+
  --deduplicate based on order_id, keeping the latest order_ts
         row_number() over (
             partition by order_id
@@ -47,16 +49,17 @@ SELECT order_id,
        currency,
        ingestion_ts
 FROM typed t
-WHERE EXISTS (
-    SELECT 1
-    FROM {{ ref('stg_customers') }} c
-    WHERE t.customer_id = c.customer_id
-)
-and exists (
-    select 1
-    from {{ ref('stg_stores') }} s
-    where t.store_id = s.store_id
-)
-and row_num = 1
+WHERE row_num = 1
+-- and EXISTS (
+--     SELECT 1
+--     FROM {{ ref('stg_customers') }} c --checks that the customer id is valid
+--     WHERE t.customer_id = c.customer_id
+-- )
+-- and exists (
+--     select 1
+--     from {{ ref('stg_stores') }} s -- checks that the store_id is valid
+--     where t.store_id = s.store_id
+-- )
+
 
 

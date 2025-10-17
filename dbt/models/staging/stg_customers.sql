@@ -1,6 +1,6 @@
 {% set src_table = 'customers' %}
 
-{{ config(materialized='table', contract={'enforced': true}) }}
+{{ config(materialized='view', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file
@@ -11,27 +11,29 @@ with bronze_parquet as (
 -- Step 2: Apply transformations
 typed as (
   select
-    cast(customer_id as bigint) as customer_id,
-    natural_key,
-    trim(first_name) as first_name,
-    trim(last_name) as last_name,
-    email,
-    phone,
-    address_line1, 
-    address_line2, 
-    city, 
-    cast(state_region as string) as state_region,
-    cast(postcode as BIGINT) as postcode,
-    cast(country_code as string) as country_code,
-    cast(latitude as double) as latitude,
-    cast(longitude as double) as longitude,
-    cast(birth_date as date) as birth_date,   
+
+    CAST(customer_id AS BIGINT) AS customer_id,
+    TRIM(natural_key) AS natural_key,
+    TRIM(first_name) AS first_name,
+    TRIM(last_name) AS last_name,
+    TRIM(email) AS email,
+    TRIM(phone) AS phone,
+    TRIM(address_line1) AS address_line1,
+    TRIM(address_line2) AS address_line2,
+    TRIM(city) AS city,
+    CAST(TRIM(state_region) AS STRING) AS state_region,
+    CAST(postcode AS BIGINT) AS postcode,
+    CAST(TRIM(country_code) AS STRING) AS country_code,
+    CAST(latitude AS DOUBLE) AS latitude,
+    CAST(longitude AS DOUBLE) AS longitude,
+    CAST(birth_date AS DATE) AS birth_date,
 -- Derive age
---    datediff('year', cast(birth_date as date), current_date) as age,
-    cast(join_ts as timestamp) as join_ts,
-    cast(is_vip as boolean) as is_vip,
-    cast(ingestion_ts as timestamp) as ingestion_ts,
-    cast(gdpr_consent as boolean) as gdpr_consent,
+--    DATEDIFF('year', CAST(TRIM(birth_date) AS DATE), CURRENT_DATE) AS age,
+    CAST(join_ts AS TIMESTAMP) AS join_ts,
+    CAST(is_vip AS BOOLEAN) AS is_vip,
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts,
+    CAST(gdpr_consent AS BOOLEAN) AS gdpr_consent,
+
       row_number() over (
         partition by natural_key
         order by join_ts desc  -- Keep latest join_ts per natural_key
@@ -63,6 +65,6 @@ select customer_id,
        ingestion_ts
  from typed
 where row_num = 1
-and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 
-and latitude between -90 and 90
-and longitude between -180 and 180
+--and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 
+--and latitude between -90 and 90
+--and longitude between -180 and 180

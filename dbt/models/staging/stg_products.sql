@@ -1,6 +1,6 @@
 {% set src_table = 'products' %}
 
-{{ config(materialized='table', contract={'enforced': true}) }}
+{{ config(materialized='view', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file
@@ -11,18 +11,22 @@ with bronze_parquet as (
 
 -- Step 2: Apply transformations
 typed as (
-select
-    cast(product_id as bigint) as product_id,
-    cast(sku as string) as sku,
-    cast(name as string) as name,
-    cast(category as string) as category,
-    cast(subcategory as string) as subcategory,
-    cast(current_price as numeric(12, 4)) as current_price,
-    cast(currency as string) as currency,
-    cast(is_discontinued as boolean) as is_discontinued,
-    cast(introduced_dt as date) as introduced_dt,
-    cast(discontinued_dt as date) as discontinued_dt,
-    cast(ingestion_ts as timestamp) as ingestion_ts,
+
+SELECT
+
+    CAST(product_id AS BIGINT) AS product_id,
+    CAST(TRIM(sku) AS STRING) AS sku,
+    CAST(TRIM(name) AS STRING) AS name,
+    CAST(TRIM(category) AS STRING) AS category,
+    CAST(TRIM(subcategory) AS STRING) AS subcategory,
+    CAST(current_price AS NUMERIC(12, 4)) AS current_price,
+    CAST(TRIM(currency) AS STRING) AS currency,
+    CAST(is_discontinued AS BOOLEAN) AS is_discontinued,
+    CAST(introduced_dt AS DATE) AS introduced_dt,
+    CAST(discontinued_dt AS DATE) AS discontinued_dt,
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts
+
+
     -- Generate a surrogate key for SCD 2    
     {{ dbt_utils.generate_surrogate_key([
       'product_id',

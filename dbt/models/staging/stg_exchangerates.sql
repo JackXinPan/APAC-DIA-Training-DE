@@ -1,6 +1,6 @@
 
 {% set src_table = 'exchangerates' %}
-{{ config(materialized='table', contract={'enforced': true}) }}
+{{ config(materialized='view', contract={'enforced': true}) }}
 {% set lake_root = var('lake_root') %}
 
 -- Step 1: Read from external Parquet file
@@ -11,10 +11,12 @@ with bronze_parquet as (
 -- Step 2: Apply transformations
 typed as (
   select
-    cast(date as date) as date,
-    cast(currency as string) as currency,
-    cast(rate_to_aud as decimal(18, 8)) as rate_to_aud,
-    cast(ingestion_ts as timestamp) as ingestion_ts
+
+    CAST(date AS DATE) AS date,
+    CAST(TRIM(currency) AS STRING) AS currency,
+    CAST(rate_to_aud AS DECIMAL(18, 8)) AS rate_to_aud,
+    CAST(ingestion_ts AS TIMESTAMP) AS ingestion_ts
+
   from bronze_parquet
 )
 
