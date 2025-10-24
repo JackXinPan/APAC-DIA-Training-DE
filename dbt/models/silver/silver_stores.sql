@@ -18,9 +18,11 @@ SELECT
         ingestion_ts
 
 FROM {{ ref('stg_stores') }}
-
+WHERE latitude between -90 and 90
+  and longitude between -180 and 180 
+  
 {% if is_incremental() %}
-  WHERE ingestion_ts > (
+  and ingestion_ts > (
     SELECT MAX(line_ingestion_ts) FROM {{ this }}
   )
 {% endif %}

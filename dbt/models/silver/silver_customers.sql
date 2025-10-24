@@ -26,11 +26,19 @@ SELECT
        gdpr_consent,
        ingestion_ts
 
-
+--and email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'-- email format validation 
+--and latitude between -90 and 90
+--and longitude between -180 and 180
 FROM {{ ref('stg_customers') }}
 
-{% if is_incremental() %}
-  WHERE ingestion_ts > (
-    SELECT MAX(line_ingestion_ts) FROM {{ this }}
-  )
-{% endif %}
+
+WHERE 
+    email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' -- email format validation
+    AND latitude BETWEEN -90 AND 90
+    AND longitude BETWEEN -180 AND 180
+
+    {% if is_incremental() %}
+    AND ingestion_ts > (
+        SELECT MAX(ingestion_ts) FROM {{ this }}
+    )
+    {% endif %}

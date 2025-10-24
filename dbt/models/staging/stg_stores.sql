@@ -45,6 +45,6 @@ select store_id,
         close_dt,
         ingestion_ts
  from typed
---where latitude between -90 and 90
+where and row_num = 1
+-- and latitude between -90 and 90
 --and longitude between -180 and 180 
---and row_num = 1

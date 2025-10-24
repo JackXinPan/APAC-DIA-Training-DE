@@ -50,16 +50,16 @@ SELECT order_id,
        ingestion_ts
 FROM typed t
 WHERE row_num = 1
--- and EXISTS (
---     SELECT 1
---     FROM {{ ref('stg_customers') }} c --checks that the customer id is valid
---     WHERE t.customer_id = c.customer_id
--- )
--- and exists (
---     select 1
---     from {{ ref('stg_stores') }} s -- checks that the store_id is valid
---     where t.store_id = s.store_id
--- )
+ and EXISTS (
+     SELECT 1
+     FROM {{ ref('stg_customers') }} c --checks that the customer id is valid
+     WHERE t.customer_id = c.customer_id
+ )
+ and exists (
+     select 1
+     from {{ ref('stg_stores') }} s -- checks that the store_id is valid
+     where t.store_id = s.store_id
+ )
 
 
 
