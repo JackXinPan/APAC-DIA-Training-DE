@@ -320,8 +320,8 @@ def retail_source(raw_path: str = "data_raw"):
 
 
     return [
-     #   customers, products, stores, suppliers,
-     #    ordersheader, orderslines, events, sensors, exchangerates, shipments,
+        customers, products, stores, suppliers,
+         ordersheader, orderslines, events, sensors, exchangerates, shipments,
          returnscombined
 
     ]
